@@ -3,7 +3,8 @@
 
 // A position on the chess board
 struct Pos {
-	byte index; // Positional index
+	// Board square index
+	byte index; 
 
 	Pos(byte index = 0) : index(index) {}
 	Pos(int x, int y) {
@@ -28,3 +29,6 @@ struct Pos {
 		return index;
 	}
 };
+
+// Converts coordinates (negative supported) to a board index/index offset
+#define POSI(x, y) ((x)+(y)*BD_SIZE)
