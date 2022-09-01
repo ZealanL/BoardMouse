@@ -14,7 +14,7 @@ BitBoard BitBoard::FlippedX() {
 
 	// Algorithm from https://www.chessprogramming.org/Flipping_Mirroring_and_Rotating
 
-	constexpr uint64_t MASKS[3] = {
+	constexpr uint64 MASKS[3] = {
 		0x5555555555555555,
 		0x3333333333333333,
 		0x0f0f0f0f0f0f0f0f
