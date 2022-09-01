@@ -81,5 +81,5 @@ typedef uint8_t byte;
 
 #define FINLINE __forceinline
 
-// Make sure we are x64-bit
+// Make sure we are 64-bit
 SASSERT(sizeof(void*) == 8, "BoardMouse can only run as a 64-bit program");
