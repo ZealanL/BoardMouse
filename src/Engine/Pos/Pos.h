@@ -12,4 +12,19 @@ struct Pos {
 
 	// Returns false if index is out-of-range
 	bool IsValid();
+
+	byte X() const { return index % BD_SIZE; }
+	byte Y() const { return index / BD_SIZE; }
+
+	Pos Offset(Pos offset) const {
+		return Pos(index + offset.index);
+	}
+
+	operator byte() const {
+		return index;
+	}
+
+	operator byte&() {
+		return index;
+	}
 };
