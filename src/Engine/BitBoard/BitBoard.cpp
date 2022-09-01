@@ -34,3 +34,7 @@ BitBoard BitBoard::FlippedY() {
 BitBoard BitBoard::ExtractBits(uint64 mask) {
 	return _pext_u64(data, mask);
 }
+
+BitBoard BitBoard::MapBits(uint64 mask) {
+	return _pdep_u64(data, mask);
+}

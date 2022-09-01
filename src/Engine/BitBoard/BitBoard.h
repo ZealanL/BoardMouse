@@ -17,7 +17,12 @@ struct BitBoard {
 	BitBoard FlippedX();
 	BitBoard FlippedY();
 
+	// Gets all bits within the mask and appends them in order to a new bitboard
+	// Extremely helpful for sliding piece occlusion lookups
 	BitBoard ExtractBits(uint64 mask);
+
+	// Opposite of ExtractBits: takes all of our bits and places them within the mask area, in order
+	BitBoard MapBits(uint64 mask);
 
 	operator uint64&() {
 		return data;
