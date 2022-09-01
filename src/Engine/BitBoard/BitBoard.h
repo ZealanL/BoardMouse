@@ -29,3 +29,6 @@ struct BitBoard {
 };
 
 SASSERT(sizeof(BitBoard) == sizeof(uint64));
+
+// BitBoard mask for all squares along the edges of the board
+#define BB_MASK_BORDER BitBoard(0xFF818181818181FF)
