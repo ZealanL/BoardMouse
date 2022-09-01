@@ -30,4 +30,4 @@ enum {
 #define BD_MAXI (BD_SIZE - 1)
 
 // Amount of squares on the board
-#define BD_SQUARE_AMOUNT (BD_SIZE*BOARD_SIZE)
+#define BD_SQUARE_AMOUNT (BD_SIZE*BD_SIZE)
