@@ -4,9 +4,9 @@ void BitBoard::Set(uint64 index, bool val) {
 	ASSERT(index < BD_SQUARE_AMOUNT);
 
 	if (val) {
-		data |= (1ull << val);
+		data |= (1ull << index);
 	} else {
-		data &= ~(1ull << val);
+		data &= ~(1ull << index);
 	}
 }
 
