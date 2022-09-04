@@ -83,3 +83,6 @@ typedef uint8_t byte;
 
 // Make sure we are 64-bit
 SASSERT(sizeof(void*) == 8, "BoardMouse can only run as a 64-bit program");
+
+// Get a bit of an integer
+#define INTBIT(x, i) (((uint64)x >> (uint64)i) & 1)
