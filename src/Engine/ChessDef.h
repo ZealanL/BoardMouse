@@ -6,9 +6,9 @@
 // Piece types enum
 enum {
 	PT_PAWN,
+	PT_ROOK,
 	PT_KNIGHT,
 	PT_BISHOP,
-	PT_ROOK,
 	PT_QUEEN,
 	PT_KING,
 
