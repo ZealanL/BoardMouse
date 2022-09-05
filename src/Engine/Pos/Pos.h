@@ -30,5 +30,7 @@ struct Pos {
 	}
 };
 
+#define POS_INVALID (Pos(-1))
+
 // Converts coordinates (negative supported) to a board index/index offset
 #define POSI(x, y) ((x)+(y)*BD_SIZE)
