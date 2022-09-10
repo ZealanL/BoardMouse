@@ -31,6 +31,10 @@ struct BitBoard {
 	operator uint64() const {
 		return data;
 	}
+
+	// Runs a function on any 1-bit in this mask
+	// Function is called with current index as the argument
+	void Iterate(std::function<void(uint64)> func) const;
 };
 
 SASSERT(sizeof(BitBoard) == sizeof(uint64));

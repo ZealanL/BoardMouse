@@ -38,3 +38,21 @@ BitBoard BitBoard::ExtractBits(uint64 mask) {
 BitBoard BitBoard::MapBits(uint64 mask) {
 	return _pdep_u64(data, mask);
 }
+
+// TODO: This can probably be made faster
+void BitBoard::Iterate(std::function<void(uint64)> func) const {
+	BitBoard bb = *this;
+	uint64 bitCount = __popcnt64(bb);
+	unsigned long curIndex = 0;
+
+	for (int i = 0; i < bitCount; i++) {
+		// Determine how many bits to walk forward
+		_BitScanReverse64(&curIndex, bb);
+		
+		// Call with current index
+		func(curIndex);
+
+		// Remove the bit we just reached and continue
+		bb -= 1ull << curIndex;
+	}
+}
