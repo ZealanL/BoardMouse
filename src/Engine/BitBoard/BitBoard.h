@@ -41,6 +41,8 @@ struct BitBoard {
 	// Runs a function on any 1-bit in this mask
 	// Function is called with current index as the argument
 	void Iterate(std::function<void(uint64_t)> func) const;
+
+	friend std::ostream& operator<<(std::ostream& stream, const BitBoard& bitBoard);
 };
 
 SASSERT(sizeof(BitBoard) == sizeof(uint64_t));
