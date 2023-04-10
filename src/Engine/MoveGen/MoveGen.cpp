@@ -39,13 +39,10 @@ constexpr uint64_t CASTLE_SAFETY_MASKS[TEAM_AMOUNT][CASTLE_SIDE_AMOUNT] = {
 };
 
 void AddMovesFromBB(Pos from, BitBoard toBB, uint8_t piece, vector<BoardState::Move>& out) {
-	for (Pos i = 0; i < BD_SQUARE_AMOUNT; i++) {
-		if (!toBB[i])
-			continue;
-
+	toBB.Iterate([&](Pos i) {
 		ASSERT(i != from);
 		out.push_back({ from, i, piece });
-	}
+	});
 }
 
 void MoveGen::GetMovesForTeam(BoardState& board, uint8_t team, vector<BoardState::Move>& movesOut) {
