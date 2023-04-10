@@ -28,13 +28,13 @@ constexpr uint64_t CASTLE_EMPTY_MASKS[TEAM_AMOUNT][CASTLE_SIDE_AMOUNT] = {
 // These squares cannot be in attack from the enemy in order to castle
 constexpr uint64_t CASTLE_SAFETY_MASKS[TEAM_AMOUNT][CASTLE_SIDE_AMOUNT] = {
 	{ // White
-		{ ANI_BM('C1') | ANI_BM('D1')	}, // Far
-		{ ANI_BM('F1') | ANI_BM('G1')	}, // Near
+		{ ANI_BM('C1') | ANI_BM('D1') }, // Far
+		{ ANI_BM('F1') | ANI_BM('G1') }, // Near
 	},
 
 	{ // Black
-		{ ANI_BM('C8') | ANI_BM('D8')	}, // Far
-		{ ANI_BM('F8') | ANI_BM('G8')	}, // Near
+		{ ANI_BM('C8') | ANI_BM('D8') }, // Far
+		{ ANI_BM('F8') | ANI_BM('G8') }, // Near
 	}
 };
 
