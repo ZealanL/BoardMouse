@@ -56,10 +56,15 @@ void MoveGen::GetMovesForTeam(BoardState& board, uint8_t team, vector<BoardState
 	auto& teamData = board.teamData[team];
 	auto& enemyTeamData = board.teamData[!team];
 
-	int teamDir = (team == TEAM_WHITE) ? 1 : -1;
-	int pawnRowY = (team == TEAM_WHITE) ? 1 : 6;
+	uint8_t teamDir = (team == TEAM_WHITE) ? 1 : -1;
+	uint8_t pawnRowY = (team == TEAM_WHITE) ? 1 : 6;
 
-	bool isInCheck = enemyTeamData.attack & teamData.kingPosMask;
+	uint8_t checkersAmount = enemyTeamData.checkers.BitCount();
+	bool multipleCheckers = checkersAmount > 1;
+
+	BitBoard checkBlockPathMask = BitBoard::Filled();
+	if (checkersAmount == 1)
+		checkBlockPathMask = LookupGen::GetLineMask(enemyTeamData.firstCheckingPiecePos, teamData.kingPos);
 
 	teamOccupy.Iterate(
 		[&](uint64_t _i) {
@@ -70,6 +75,10 @@ void MoveGen::GetMovesForTeam(BoardState& board, uint8_t team, vector<BoardState
 			BitBoard moves;
 
 			uint8_t piece = board.pieceTypes[i];
+
+			if (multipleCheckers && piece != PT_KING)
+				return;
+
 			if (piece == PT_PAWN) {
 				// Removes the forward move if the square in front is occupied
 				BitBoard forwardMove = LookupGen::GetPawnMoves(i, team) & ~combinedOccupy;
@@ -80,32 +89,37 @@ void MoveGen::GetMovesForTeam(BoardState& board, uint8_t team, vector<BoardState
 					forwardMove |= ((team == TEAM_WHITE ? (forwardMove << BD_SIZE) : (forwardMove >> BD_SIZE)) & ~combinedOccupy);
 
 				// Only adds attacks that are to squares with an enemy piece
-				BitBoard attacks = LookupGen::GetPawnAttacks(i, team) & (enemyOccupy | board.enPassantMask);
+				BitBoard attacks = LookupGen::GetPawnAttacks(i, team) & (enemyOccupy | board.enPassantToMask);
 
-				moves = forwardMove | attacks;
+				moves = (forwardMove | attacks) & checkBlockPathMask;
+				
+				// FIX FOR SPECIAL CASE: Allow en passant to capture a checking pawn
+				if (checkersAmount && enemyTeamData.firstCheckingPiecePos == board.enPassantPawnPos) {
+					moves |= attacks & board.enPassantToMask;
+				}
 			} else if (piece == PT_KNIGHT) {
 				moves = LookupGen::GetKnightMoves(i) & ~teamOccupy, piece, movesOut;
 			} else if (piece == PT_ROOK) {
 
 				BitBoard baseMoves, occludedMoves;
 				LookupGen::GetRookMoves(i, combinedOccupy, baseMoves, occludedMoves);
-				moves = occludedMoves & ~teamOccupy;
+				moves = occludedMoves & ~teamOccupy & checkBlockPathMask;
 
 			} else if (piece == PT_BISHOP) {
 
 				BitBoard baseMoves, occludedMoves;
 				LookupGen::GetBishopMoves(i, combinedOccupy, baseMoves, occludedMoves);
-				moves = occludedMoves & ~teamOccupy, piece, movesOut;
+				moves = occludedMoves & ~teamOccupy & checkBlockPathMask;
 
 			} else if (piece == PT_QUEEN) {
 				BitBoard baseMoves, occludedMoves;
 				LookupGen::GetQueenMoves(i, combinedOccupy, baseMoves, occludedMoves);
-				moves = occludedMoves & ~teamOccupy, piece, movesOut;
+				moves = occludedMoves & ~teamOccupy & checkBlockPathMask;
 			} else { // King
 				moves = LookupGen::GetKingMoves(i) & ~teamOccupy & ~enemyTeamData.attack;
 
 				// Castling
-				if (!isInCheck) {
+				if (checkersAmount == 0) {
 					for (int i = 0; i < 2; i++) {
 						bool canCastle = i ? teamData.canCastle_K : teamData.canCastle_Q;
 						BitBoard castleEmptyMask = CASTLE_EMPTY_MASKS[team][i];

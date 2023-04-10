@@ -33,6 +33,12 @@ struct BoardState {
 		// Only counts if the piece is the only blocker of that path
 		BitBoard pinnedPieces;
 
+		// Pieces that check the enemy king
+		BitBoard checkers;
+
+		// If checkers != 0, the first piece to check the king is here
+		Pos firstCheckingPiecePos;
+
 		bool canCastle_Q; // Can castle queen-side (right/+x)
 		bool canCastle_K; // Can castle king-side (left/-x)
 	};
@@ -52,7 +58,11 @@ struct BoardState {
 	uint8_t pieceTypes[BD_SQUARE_AMOUNT];
 
 	// Normally blank, has a single bit on when en passant is possible
-	BitBoard enPassantMask;
+	BitBoard enPassantToMask;
+
+	// Position of the pawn that can be captured by en passant
+	// NOTE: Only valid if enPassantToMask != 0
+	Pos enPassantPawnPos;
 
 	// Run a move on the board, update accordingly
 	void ExecuteMove(Move move, uint8_t team);

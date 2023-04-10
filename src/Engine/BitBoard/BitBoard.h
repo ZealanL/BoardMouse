@@ -8,6 +8,10 @@ struct BitBoard {
 
 	BitBoard(uint64_t data64 = 0) : data(data64) {}
 
+	static BitBoard Filled() {
+		return ~0ull;
+	}
+
 	bool operator[](uint64_t index) const {
 		return data & (1ull << index);
 	}

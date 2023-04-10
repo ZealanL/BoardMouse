@@ -6,8 +6,8 @@ void BoardState::UpdateAttacksAndPins(uint8_t team) {
 	auto& etd = teamData[!team];
 	BitBoard combinedOccupy = td.occupy | etd.occupy;
 
-	// Clear attacks/pins
-	td.attack = etd.pinnedPieces = 0;
+	// Clear attacks/pins/checking pieces
+	td.attack = etd.pinnedPieces = td.checkers = 0;
 
 	const auto fnUpdatePins = [&](Pos pinnerPos) {
 		BitBoard betweenMask = LookupGen::GetBetweenMask(pinnerPos, etd.kingPos);
@@ -23,47 +23,55 @@ void BoardState::UpdateAttacksAndPins(uint8_t team) {
 		[&](uint64_t i) {
 			uint8_t pieceType = pieceTypes[i];
 
+			BitBoard moves;
+
 			switch (pieceType) {
 			case PT_PAWN:
-				td.attack |= LookupGen::GetPawnAttacks(i, team);
-				break;
+			{
+				moves = LookupGen::GetPawnAttacks(i, team);
+			}
+			break;
 			case PT_KNIGHT:
-				td.attack |= LookupGen::GetKnightMoves(i);
-				break;
+			{
+				moves = LookupGen::GetKnightMoves(i);
+			}
+			break;
 			case PT_ROOK:
 			{
-				BitBoard baseMoves, occludedMoves;
-				LookupGen::GetRookMoves(i, etd.occupy, baseMoves, occludedMoves);
+				BitBoard baseMoves;
+				LookupGen::GetRookMoves(i, etd.occupy, baseMoves, moves);
 
 				if (baseMoves & etd.kingPosMask)
 					fnUpdatePins(i);
-
-				td.attack |= occludedMoves;
 			}
 			break;
 			case PT_BISHOP:
 			{
-				BitBoard baseMoves, occludedMoves;
-				LookupGen::GetBishopMoves(i, etd.occupy, baseMoves, occludedMoves);
+				BitBoard baseMoves;
+				LookupGen::GetBishopMoves(i, etd.occupy, baseMoves, moves);
 
 				if (baseMoves & etd.kingPosMask)
 					fnUpdatePins(i);
-
-				td.attack |= occludedMoves;
 			}
 			case PT_QUEEN:
 			{
-				BitBoard baseMoves, occludedMoves;
-				LookupGen::GetQueenMoves(i, etd.occupy, baseMoves, occludedMoves);
+				BitBoard baseMoves;
+				LookupGen::GetQueenMoves(i, etd.occupy, baseMoves, moves);
 
 				if (baseMoves & etd.kingPosMask)
 					fnUpdatePins(i);
-
-				td.attack |= occludedMoves;
 			}
 			default: // King
+				moves = LookupGen::GetKingMoves(i);;
 				td.attack |= LookupGen::GetKingMoves(i);
-				break;
+			}
+
+			td.attack |= moves;
+			if (moves & etd.kingPosMask) {
+				if (!td.checkers)
+					td.firstCheckingPiecePos = i;
+				
+				td.checkers.Set(i, true);
 			}
 		}
 	);
@@ -82,18 +90,19 @@ void BoardState::ExecuteMove(Move move, uint8_t team) {
 
 	// En passant capture
 	if (move.resultPiece == PT_PAWN) {
-		if (toMask & enPassantMask) {
+		if (toMask == enPassantToMask) {
 			// Remove piece behind our pawn
-			etd.occupy &= ~(team == TEAM_WHITE ? toMask >> BD_SIZE : toMask << BD_SIZE);
-			enPassantMask = 0;
+			etd.occupy.Set(enPassantPawnPos, 0);
+			enPassantToMask = 0;
 		} else if (abs(move.to - move.from) > BD_SIZE + 1) {
 			// Double pawn move, set en passant mask behind us
-			enPassantMask = (team == TEAM_WHITE ? toMask >> BD_SIZE : toMask << BD_SIZE);
+			enPassantToMask = (team == TEAM_WHITE ? toMask >> BD_SIZE : toMask << BD_SIZE);
+			enPassantPawnPos = move.to;
 		} else {
-			enPassantMask = 0;
+			enPassantToMask = 0;
 		}
 	} else {
-		enPassantMask = 0;
+		enPassantToMask = 0;
 
 		if (move.resultPiece == PT_KING) {
 			{ // Update king pos
