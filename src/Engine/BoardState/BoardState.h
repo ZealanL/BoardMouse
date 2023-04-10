@@ -2,12 +2,26 @@
 #include "../BitBoard/BitBoard.h"
 #include "../Pos/Pos.h"
 
+#define HALF_MOVE_DRAW_COUNT 100
+
+#define PIN_DIR_AMOUNT 8
+
 // Stores all info for the state of a chess game
 struct BoardState {
-	struct {
+
+	struct Move {
+		Pos from, to;
+
+		// Usually set to the piece we moved, except when promoting pawns
+		uint8_t resultPiece;
+	};
+
+	struct TeamData {
 
 		// Has a single bit for the position of the king
-		BitBoard kingPos;
+		BitBoard kingPosMask;
+
+		uint8_t kingPos; 
 
 		// What squares we have pieces in
 		BitBoard occupy;
@@ -15,12 +29,34 @@ struct BoardState {
 		// What squares we can attack
 		BitBoard attack;
 
-		bool canCastleL, canCastleR;
-	} teamData[TEAM_AMOUNT];
+		// What pieces of ours block a sliding piece from attacking our king
+		// Only counts if the piece is the only blocker of that path
+		BitBoard pinnedPieces;
+
+		bool canCastle_Q; // Can castle queen-side (right/+x)
+		bool canCastle_K; // Can castle king-side (left/-x)
+	};
+	TeamData teamData[TEAM_AMOUNT];
 	
+	// Number of half-moves since a pawn advanced or a piece was captured
+	// When counter reaches HALF_MOVE_DRAW_COUNT, its a draw
+	uint8_t halfMovesSincePawnOrCapture;
+
+	// What move number we are on, starts at 1
+	uint16_t moveNum = 1;
+
+	// Team who's turn it is
+	uint8_t turnTeam = TEAM_WHITE;
+
 	// What pieces are at what positions
-	uint8 pieceTypes[BD_SQUARE_AMOUNT];
+	uint8_t pieceTypes[BD_SQUARE_AMOUNT];
 
 	// Normally blank, has a single bit on when en passant is possible
 	BitBoard enPassantMask;
+
+	// Run a move on the board, update accordingly
+	void ExecuteMove(Move move, uint8_t team);
+
+	// Update a team's attack and pin masks
+	void UpdateAttacksAndPins(uint8_t team);
 };

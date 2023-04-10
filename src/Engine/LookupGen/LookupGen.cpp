@@ -30,6 +30,12 @@ static BitBoard
 // Memory size: Negligible
 static BitBoard betweenMasks[BD_SQUARE_AMOUNT][BD_SQUARE_AMOUNT];
 
+// Masks of the line connecting two squares, from one side of the board to the other
+// Only works for paths that are diagonal or straight
+// Memory size: Negligible
+static BitBoard lineMasks[BD_SQUARE_AMOUNT][BD_SQUARE_AMOUNT];
+
+
 template<bool IS_KING>
 void GenerateNonSlidingPieceMoves() {
 	pair<int, int>
@@ -120,13 +126,13 @@ void GenerateSlidingPieceMoves() {
 	}
 
 	// Make the base masks (no occlusion)
-	for (uint64 i = 0; i < BD_SQUARE_AMOUNT; i++) {
+	for (uint64_t i = 0; i < BD_SQUARE_AMOUNT; i++) {
 		BitBoard& baseMoves = (IS_BISHOP ? bishopMoveLookup : rookMoveLookup)[i];
 
 		fnFillRays(baseMoves, i, offsets);
 
 		// Make the occlusion masks
-		for (uint64 j = 0; j < SLIDER_OCCLUSION_LOOKUP_ENTRY_COUNT; j++) {
+		for (uint64_t j = 0; j < SLIDER_OCCLUSION_LOOKUP_ENTRY_COUNT; j++) {
 			BitBoard& occlusionMoves = (IS_BISHOP ? bishopOcclusionLookup : rookOcclusionLookup)[i][j];
 
 			// Using the current entry index, we can map the index bits to the bishop's attack squares to get the occlusion bitboard
@@ -165,9 +171,10 @@ void GeneratePawnMovesAndAttacks() {
 	}
 }
 
-void GenerateBetweenMasks() {
+void GenerateBetweenAndLineMasks() {
 	// Prevent uninitialized memory usage
 	memset(betweenMasks, 0, sizeof(betweenMasks));
+	memset(lineMasks, 0, sizeof(lineMasks));
 
 	for (Pos from = 0; from < BD_SQUARE_AMOUNT; from++) {
 		for (Pos to = 0; to < BD_SQUARE_AMOUNT; to++) {
@@ -178,16 +185,30 @@ void GenerateBetweenMasks() {
 			int dy = to.Y() - from.Y();
 			int maxDimLen = MAX(abs(dx), abs(dy));
 
-			BitBoard& mask = betweenMasks[from][to];
+			BitBoard& betweenMask = betweenMasks[from][to], lineMask = lineMasks[from][to];
 
 			// Straight line path OR diagonal path
 			if ((dx == 0) != (dy == 0) || abs(dx) == abs(dy)) {
 
 				int step = POSI(dx / maxDimLen, dy / maxDimLen);
 				
+				// Between path: Fill all squares between start and end point
 				for (Pos cur = from; cur != to; cur += step) {
-					mask.Set(cur, 1);
+					betweenMask.Set(cur, 1);
 				}
+
+				// Line path: Follow both directions (forwards and backwards)
+				for (int dirSwitch = -1; dirSwitch <= 1; dirSwitch += 2) {
+
+					// Fill all squares until we hit a wall
+					for (
+						int x = from.X(), y = from.Y();
+						(x > -1 && y > -1) && (x < BD_SIZE && y < BD_SIZE);
+						x += dx* dirSwitch, y += dy* dirSwitch) {
+						lineMask.Set(POSI(x, y), 1);
+					}
+				}
+				
 
 			} else {
 				// Invalid path, ignore it
@@ -218,25 +239,39 @@ void LookupGen::InitOnce() {
 	DLOG(" > Generating pawn moves/attacks...");
 	GeneratePawnMovesAndAttacks();
 
-	DLOG(" > Generating between-masks...");
-	GenerateBetweenMasks();
+	DLOG(" > Generating between-masks and line-masks...");
+	GenerateBetweenAndLineMasks();
 
 	DLOG(" > Done!");
 }
 
-template <bool IS_BISHOP>
-BitBoard GetSliderMoves(Pos sliderPos, BitBoard occupiedMask) {
-	BitBoard baseMoves = (IS_BISHOP ? bishopMoveLookup : rookMoveLookup)[sliderPos];
+void LookupGen::GetRookMoves(Pos rookPos, BitBoard occupiedMask, BitBoard& outBaseMoves, BitBoard& outOccludedMoves) {
+	BitBoard baseMoves = rookMoveLookup[rookPos];
+	outBaseMoves = baseMoves;
 	BitBoard occlusionBits = occupiedMask.ExtractBits(baseMoves);
-	return (IS_BISHOP ? bishopOcclusionLookup : rookOcclusionLookup)[sliderPos][occlusionBits];
+	outOccludedMoves = rookOcclusionLookup[rookPos][occlusionBits];
 }
 
-BitBoard LookupGen::GetRookMoves(Pos rookPos, BitBoard occupiedMask) {
-	return GetSliderMoves<false>(rookPos, occupiedMask);
+void LookupGen::GetBishopMoves(Pos bishopPos, BitBoard occupiedMask, BitBoard& outBaseMoves, BitBoard& outOccludedMoves) {
+	BitBoard baseMoves = bishopMoveLookup[bishopPos];
+	outBaseMoves = baseMoves;
+	BitBoard occlusionBits = occupiedMask.ExtractBits(baseMoves);
+	outOccludedMoves = bishopOcclusionLookup[bishopPos][occlusionBits];
 }
 
-BitBoard LookupGen::GetBishopMoves(Pos bishopPos, BitBoard occupiedMask) {
-	return GetSliderMoves<true>(bishopPos, occupiedMask);
+void LookupGen::GetQueenMoves(Pos queenPos, BitBoard occupiedMask, BitBoard& outBaseMoves, BitBoard& outOccludedMoves) {
+	// TODO: Maybe use seperate lookup(?)
+
+	BitBoard 
+		baseMoves_R = rookMoveLookup[queenPos],
+		baseMoves_B = bishopMoveLookup[queenPos];
+	outBaseMoves = baseMoves_R | baseMoves_B;
+
+	BitBoard
+		occlusionBits_R = occupiedMask.ExtractBits(baseMoves_R),
+		occlusionBits_B = occupiedMask.ExtractBits(baseMoves_B);
+	outOccludedMoves = 
+		rookOcclusionLookup[queenPos][occlusionBits_R] | bishopOcclusionLookup[queenPos][occlusionBits_B];
 }
 
 BitBoard LookupGen::GetKingMoves(Pos kingPos) {
@@ -247,10 +282,18 @@ BitBoard LookupGen::GetKnightMoves(Pos knightPos) {
 	return knightMoveLookup[knightPos];
 }
 
-BitBoard LookupGen::GetPawnMoves(Pos pawnPos, uint8 team) {
+BitBoard LookupGen::GetPawnMoves(Pos pawnPos, uint8_t team) {
 	return pawnMoveLookup[team][pawnPos];
 }
 
-BitBoard LookupGen::GetPawnAttacks(Pos pawnPos, uint8 team) {
+BitBoard LookupGen::GetPawnAttacks(Pos pawnPos, uint8_t team) {
 	return pawnAttackLookup[team][pawnPos];
+}
+
+BitBoard LookupGen::GetLineMask(Pos from, Pos to) {
+	return lineMasks[from.index][to.index];
+}
+
+BitBoard LookupGen::GetBetweenMask(Pos from, Pos to) {
+	return betweenMasks[from.index][to.index];
 }

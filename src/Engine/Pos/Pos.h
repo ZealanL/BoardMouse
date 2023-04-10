@@ -7,7 +7,7 @@ struct Pos {
 	byte index; 
 
 	Pos(byte index = 0) : index(index) {}
-	Pos(int x, int y) {
+	Pos(uint8_t x, uint8_t y) {
 		index = x + (y * BD_SIZE);
 	}
 

@@ -44,11 +44,6 @@ using std::string;
 using std::wstring;
 using std::pair;
 
-// Integer typedefs
-typedef int8_t	int8;	typedef uint8_t	 uint8;
-typedef int16_t int16;	typedef uint16_t uint16;
-typedef int32_t int32;	typedef uint32_t uint32;
-typedef int64_t int64;	typedef uint64_t uint64;
 typedef uint8_t byte;
 #pragma endregion
 
@@ -85,4 +80,23 @@ typedef uint8_t byte;
 SASSERT(sizeof(void*) == 8, "BoardMouse can only run as a 64-bit program");
 
 // Get a bit of an integer
-#define INTBIT(x, i) (((uint64)x >> (uint64)i) & 1)
+#define INTBIT(x, i) (((uint64_t)x >> (uint64_t)i) & 1)
+
+inline vector<string> __SPLIT_STR(const string& str, const string& delim) {
+	vector<string> results;
+
+	size_t startPos = 0;
+	size_t endPos;
+
+	string tokenBuffer;
+	while ((endPos = str.find(delim, startPos)) != string::npos) {
+		tokenBuffer = str.substr(startPos, endPos - startPos);
+		startPos = endPos + delim.size();
+		results.push_back(tokenBuffer);
+	}
+
+	results.push_back(str.substr(startPos));
+	return results;
+}
+
+#define SPLIT_STR __SPLIT_STR
