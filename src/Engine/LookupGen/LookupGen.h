@@ -19,5 +19,9 @@ namespace LookupGen {
 	// NOTE: Line extends to the edge of the board
 	BitBoard GetLineMask(Pos from, Pos to);
 
+	// Like GetLineMask, but DOESN'T extent do the end of the board
+	// Like GetBetweenMask, but includes from and to
+	BitBoard GetPartialLineMask(Pos from, Pos to);
+
 	BitBoard GetBetweenMask(Pos from, Pos to);
 }

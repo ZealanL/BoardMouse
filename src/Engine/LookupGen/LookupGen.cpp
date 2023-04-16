@@ -35,6 +35,10 @@ static BitBoard betweenMasks[BD_SQUARE_AMOUNT][BD_SQUARE_AMOUNT];
 // Memory size: Negligible
 static BitBoard lineMasks[BD_SQUARE_AMOUNT][BD_SQUARE_AMOUNT];
 
+// Masks of the line connecting two squares, but doesn't extend beyond the two points
+// Only works for paths that are diagonal or straight
+// Memory size: Negligible
+static BitBoard partialLineMasks[BD_SQUARE_AMOUNT][BD_SQUARE_AMOUNT];
 
 template<bool IS_KING>
 void GenerateNonSlidingPieceMoves() {
@@ -186,7 +190,10 @@ void GenerateBetweenAndLineMasks() {
 			int dy = to.Y() - from.Y();
 			int maxDimLen = MAX(abs(dx), abs(dy));
 
-			BitBoard& betweenMask = betweenMasks[from][to], lineMask = lineMasks[from][to];
+			BitBoard&
+				betweenMask = betweenMasks[from][to],
+				lineMask = lineMasks[from][to],
+				partialLineMask = partialLineMasks[from][to];
 
 			// Straight line path OR diagonal path
 			if ((dx == 0) != (dy == 0) || abs(dx) == abs(dy)) {
@@ -209,8 +216,11 @@ void GenerateBetweenAndLineMasks() {
 						lineMask.Set(POSI(x, y), 1);
 					}
 				}
-				
 
+				// Partial line path: just use between path with start and end filled
+				partialLineMask = betweenMask;
+				partialLineMask.Set(from, 1);
+				partialLineMask.Set(to, 1);
 			} else {
 				// Invalid path, ignore it
 			}
@@ -293,6 +303,10 @@ BitBoard LookupGen::GetPawnAttacks(Pos pawnPos, uint8_t team) {
 
 BitBoard LookupGen::GetLineMask(Pos from, Pos to) {
 	return lineMasks[from.index][to.index];
+}
+
+BitBoard LookupGen::GetPartialLineMask(Pos from, Pos to) {
+	return partialLineMasks[from.index][to.index];
 }
 
 BitBoard LookupGen::GetBetweenMask(Pos from, Pos to) {
