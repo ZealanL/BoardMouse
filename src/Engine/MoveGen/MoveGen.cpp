@@ -37,9 +37,23 @@ constexpr uint64_t CASTLE_SAFETY_MASKS[TEAM_AMOUNT][CASTLE_SIDE_AMOUNT] = {
 	}
 };
 
+template <bool IS_PAWN>
 void AddMovesFromBB(Pos from, BitBoard toBB, uint8_t piece, vector<BoardState::Move>& out) {
 	toBB.Iterate([&](Pos i) {
-		ASSERT(i != from);
+
+		// Promotion check
+		if (IS_PAWN) {
+			uint8_t y = i.Y();
+			if (y == 0 || y == (BD_SIZE - 1)) {
+				// Promotion
+				out.push_back({ from, i, PT_KNIGHT });
+				out.push_back({ from, i, PT_BISHOP });
+				out.push_back({ from, i, PT_ROOK });
+				out.push_back({ from, i, PT_QUEEN });
+				return;
+			}
+		}
+
 		out.push_back({ from, i, piece });
 	});
 }
@@ -141,7 +155,11 @@ void MoveGen::GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 			if (teamData.pinnedPieces[i])
 				moves &= LookupGen::GetLineMask(i, teamData.kingPos);
 
-			AddMovesFromBB(i, moves, piece, movesOut);
+			if (piece == PT_PAWN) {
+				AddMovesFromBB<true>(i, moves, piece, movesOut);
+			} else {
+				AddMovesFromBB<false>(i, moves, piece, movesOut);
+			}
 		}
 	);
 }
