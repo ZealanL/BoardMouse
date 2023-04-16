@@ -40,8 +40,7 @@ static BitBoard lineMasks[BD_SQUARE_AMOUNT][BD_SQUARE_AMOUNT];
 // Memory size: Negligible
 static BitBoard partialLineMasks[BD_SQUARE_AMOUNT][BD_SQUARE_AMOUNT];
 
-template<bool IS_KING>
-void GenerateNonSlidingPieceMoves() {
+void GenerateNonSlidingPieceMoves(bool isKing) {
 	pair<int, int>
 		kingMoveOffsets[8] = {
 			{-1, -1},
@@ -69,13 +68,13 @@ void GenerateNonSlidingPieceMoves() {
 			{ 2,  1},
 		};
 
-	auto moveOffsets = IS_KING ? kingMoveOffsets : knightMoveOffsets;
+	auto moveOffsets = isKing ? kingMoveOffsets : knightMoveOffsets;
 
 	for (Pos pos = 0; pos < BD_SQUARE_AMOUNT; pos++) {
 		int x = pos.X();
 		int y = pos.Y();
 
-		BitBoard& mask = (IS_KING ? kingMoveLookup : knightMoveLookup)[pos];
+		BitBoard& mask = (isKing ? kingMoveLookup : knightMoveLookup)[pos];
 
 		// Try to add any that we can
 		for (int i = 0; i < 8; i++) {
@@ -88,36 +87,28 @@ void GenerateNonSlidingPieceMoves() {
 	}
 }
 
-template<bool IS_BISHOP>
-void GenerateSlidingPieceMoves() {
+struct RayOffset {
+	int x, y;
+};
+void FillRay(BitBoard& board, Pos start, RayOffset offset, BitBoard occlusionMask) {
+	for (
+		int x = start.X() + offset.x, y = start.Y() + offset.y;
+		(x >= 0 && x < BD_SIZE) && (y >= 0 && y < BD_SIZE);
+		x += offset.x, y += offset.y
+		) {
 
-	struct RayOffset {
-		int x, y;
-	};
+		Pos curPos = Pos(x, y);
+		board.Set(curPos, true);
+		if (occlusionMask[curPos])
+			return; // We hit something
+	}
+}
 
-	// Quick local lambda function for filling a 4 rays on a bitboard
-	// Stops if it hits an occluded square (AFTER filling it)
-	auto fnFillRays = [](BitBoard& board, Pos start, RayOffset rayOffsets[4], BitBoard occlusionMask = 0) {
-		for (int rayIndex = 0; rayIndex < 4; rayIndex++) {
-			RayOffset offset = rayOffsets[rayIndex];
-
-			for (
-				int x = start.X() + offset.x, y = start.Y() + offset.y;
-				(x >= 0 && x < BD_SIZE) && (y >= 0 && y < BD_SIZE); 
-				x += offset.x, y += offset.y
-				) {
-
-				Pos curPos = Pos(x, y);
-				board.Set(curPos, true);
-				if (occlusionMask[curPos])
-					break; // We hit something
-			}
-		}
-	};
+void GenerateSlidingPieceMoves(bool isBishop) {
 
 	// X/Y offsets for each direction
 	RayOffset offsets[4];
-	if (IS_BISHOP) {
+	if (isBishop) {
 		offsets[0] = {-1, -1};
 		offsets[1] = {1, -1};
 		offsets[2] = {-1, 1};
@@ -131,20 +122,22 @@ void GenerateSlidingPieceMoves() {
 
 	// Make the base masks (no occlusion)
 	for (uint64_t i = 0; i < BD_SQUARE_AMOUNT; i++) {
-		BitBoard& baseMoves = (IS_BISHOP ? bishopMoveLookup : rookMoveLookup)[i];
+		BitBoard& baseMoves = (isBishop ? bishopMoveLookup : rookMoveLookup)[i];
 
-		fnFillRays(baseMoves, i, offsets);
+		for (int ri = 0; ri < 4; ri++)
+			FillRay(baseMoves, i, offsets[ri], 0);
 
 		// Make the occlusion masks
 		for (uint64_t j = 0; j < SLIDER_OCCLUSION_LOOKUP_ENTRY_COUNT; j++) {
-			BitBoard& occlusionMoves = (IS_BISHOP ? bishopOcclusionLookup : rookOcclusionLookup)[i][j];
+			BitBoard& occlusionMoves = (isBishop ? bishopOcclusionLookup : rookOcclusionLookup)[i][j];
 
 			// Using the current entry index, we can map the index bits to the bishop's attack squares to get the occlusion bitboard
 			BitBoard occlusion = BitBoard(j).MapBits(baseMoves);
 			occlusion.Set(i, false);
 
 			// Then simply trace rays and stop when we hit something
-			fnFillRays(occlusionMoves, i, offsets, occlusion);
+			for (int ri = 0; ri < 4; ri++)
+				FillRay(baseMoves, i, offsets[ri], occlusion);
 		}
 	}
 }
@@ -190,10 +183,7 @@ void GenerateBetweenAndLineMasks() {
 			int dy = to.Y() - from.Y();
 			int maxDimLen = MAX(abs(dx), abs(dy));
 
-			BitBoard&
-				betweenMask = betweenMasks[from][to],
-				lineMask = lineMasks[from][to],
-				partialLineMask = partialLineMasks[from][to];
+			BitBoard betweenMask, lineMask, partialLineMask;
 
 			// Straight line path OR diagonal path
 			if ((dx == 0) != (dy == 0) || abs(dx) == abs(dy)) {
@@ -201,20 +191,15 @@ void GenerateBetweenAndLineMasks() {
 				int step = POSI(dx / maxDimLen, dy / maxDimLen);
 				
 				// Between path: Fill all squares between start and end point
-				for (Pos cur = from; cur != to; cur += step) {
+				for (Pos cur = from; cur != to; cur += step)
 					betweenMask.Set(cur, 1);
-				}
 
 				// Line path: Follow both directions (forwards and backwards)
 				for (int dirSwitch = -1; dirSwitch <= 1; dirSwitch += 2) {
+					FillRay(lineMask, from, RayOffset{ dx * dirSwitch, dy * dirSwitch }, 0);
 
-					// Fill all squares until we hit a wall
-					for (
-						int x = from.X(), y = from.Y();
-						(x > -1 && y > -1) && (x < BD_SIZE && y < BD_SIZE);
-						x += dx* dirSwitch, y += dy* dirSwitch) {
-						lineMask.Set(POSI(x, y), 1);
-					}
+					// Fill starting square
+					lineMask.Set(from, 1);
 				}
 
 				// Partial line path: just use between path with start and end filled
@@ -224,6 +209,10 @@ void GenerateBetweenAndLineMasks() {
 			} else {
 				// Invalid path, ignore it
 			}
+
+			betweenMasks[from][to] = betweenMask;
+			lineMasks[from][to] = lineMask;
+			partialLineMasks[from][to] = partialLineMask;
 		}
 	}
 }
@@ -238,14 +227,14 @@ void LookupGen::InitOnce() {
 	}
 
 	DLOG(" > Generating knight moves...");
-	GenerateNonSlidingPieceMoves<false>();
+	GenerateNonSlidingPieceMoves(false);
 	DLOG(" > Generating king moves...");
-	GenerateNonSlidingPieceMoves<true>();
+	GenerateNonSlidingPieceMoves(true);
 	
 	DLOG(" > Generating rook moves...");
-	GenerateSlidingPieceMoves<false>();
+	GenerateSlidingPieceMoves(false);
 	DLOG(" > Generating bishop moves...");
-	GenerateSlidingPieceMoves<true>();
+	GenerateSlidingPieceMoves(true);
 
 	DLOG(" > Generating pawn moves/attacks...");
 	GeneratePawnMovesAndAttacks();
