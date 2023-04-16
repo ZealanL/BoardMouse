@@ -63,7 +63,7 @@ void MoveGen::GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 
 	BitBoard checkBlockPathMask = BitBoard::Filled();
 	if (checkersAmount == 1)
-		checkBlockPathMask = LookupGen::GetBetweenMask(enemyTeamData.firstCheckingPiecePos, teamData.kingPos) | enemyTeamData.checkers;
+		checkBlockPathMask = LookupGen::GetPartialLineMask(enemyTeamData.firstCheckingPiecePos, teamData.kingPos);
 
 	teamOccupy.Iterate(
 		[&](uint64_t _i) {
@@ -138,9 +138,8 @@ void MoveGen::GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 				}
 			}
 
-			if (teamData.pinnedPieces[i]) {
+			if (teamData.pinnedPieces[i])
 				moves &= LookupGen::GetLineMask(i, teamData.kingPos);
-			}
 
 			AddMovesFromBB(i, moves, piece, movesOut);
 		}
