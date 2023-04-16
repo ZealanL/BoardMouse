@@ -26,6 +26,8 @@ enum {
 	TEAM_AMOUNT
 };
 
+constexpr const char* TEAM_NAMES[TEAM_AMOUNT] = { "WHITE", "BLACK" };
+
 // Size of x/y dimension of the board
 #define BD_SIZE 8
 

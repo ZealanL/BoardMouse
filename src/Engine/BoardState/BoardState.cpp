@@ -87,7 +87,7 @@ void BoardState::ExecuteMove(Move move) {
 
 #ifdef _DEBUG
 	if (!td.occupy[move.from] || td.occupy[move.to]) {
-		ERR_CLOSE("Tried to execute invalid move " << move << " on BoardState " << *this);
+		ERR_CLOSE("Tried to execute invalid move " << move << " for team " << TEAM_NAMES[turnTeam] << " on BoardState " << *this);
 	}
 #endif
 
