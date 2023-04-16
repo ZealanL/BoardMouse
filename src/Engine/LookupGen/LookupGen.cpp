@@ -137,7 +137,7 @@ void GenerateSlidingPieceMoves(bool isBishop) {
 
 			// Then simply trace rays and stop when we hit something
 			for (int ri = 0; ri < 4; ri++)
-				FillRay(baseMoves, i, offsets[ri], occlusion);
+				FillRay(occlusionMoves, i, offsets[ri], occlusion);
 		}
 	}
 }
