@@ -97,7 +97,7 @@ void MoveGen::GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 					moves |= attacks & board.enPassantToMask;
 				}
 			} else if (piece == PT_KNIGHT) {
-				moves = LookupGen::GetKnightMoves(i) & ~teamOccupy, piece, movesOut;
+				moves = LookupGen::GetKnightMoves(i) & ~teamOccupy & checkBlockPathMask;
 			} else if (piece == PT_ROOK) {
 
 				BitBoard baseMoves, occludedMoves;
