@@ -137,6 +137,7 @@ void GenerateSlidingPieceMoves() {
 
 			// Using the current entry index, we can map the index bits to the bishop's attack squares to get the occlusion bitboard
 			BitBoard occlusion = BitBoard(j).MapBits(baseMoves);
+			occlusion.Set(i, false);
 
 			// Then simply trace rays and stop when we hit something
 			fnFillRays(occlusionMoves, i, offsets, occlusion);

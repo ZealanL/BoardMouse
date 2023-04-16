@@ -1,9 +1,6 @@
 #include "MoveGen.h"
 
-#include "../Util/Util.h"
 #include "../LookupGen/LookupGen.h"
-
-using namespace Util;
 
 enum {
 	CASTLE_SIDE_QUEEN,	// Low X
@@ -11,6 +8,8 @@ enum {
 
 	CASTLE_SIDE_AMOUNT
 };
+
+#define ANI_BM(chars) (1ull << (uint8_t)Pos::Read(chars))
 
 // These squares must be empty in order to castle
 constexpr uint64_t CASTLE_EMPTY_MASKS[TEAM_AMOUNT][CASTLE_SIDE_AMOUNT] = {
@@ -61,7 +60,7 @@ void MoveGen::GetMovesForTeam(BoardState& board, uint8_t team, vector<BoardState
 
 	BitBoard checkBlockPathMask = BitBoard::Filled();
 	if (checkersAmount == 1)
-		checkBlockPathMask = LookupGen::GetLineMask(enemyTeamData.firstCheckingPiecePos, teamData.kingPos);
+		checkBlockPathMask = LookupGen::GetBetweenMask(enemyTeamData.firstCheckingPiecePos, teamData.kingPos) | enemyTeamData.checkers;
 
 	teamOccupy.Iterate(
 		[&](uint64_t _i) {
@@ -119,15 +118,17 @@ void MoveGen::GetMovesForTeam(BoardState& board, uint8_t team, vector<BoardState
 				if (checkersAmount == 0) {
 					for (int i = 0; i < 2; i++) {
 						bool canCastle = i ? teamData.canCastle_K : teamData.canCastle_Q;
-						BitBoard castleEmptyMask = CASTLE_EMPTY_MASKS[team][i];
-						if ((combinedOccupy & castleEmptyMask) == 0) {
-							BitBoard castleSafetyMask = CASTLE_SAFETY_MASKS[team][i];
-							if ((castleSafetyMask & enemyTeamData.attack) == 0) {
-								BoardState::Move castleMove;
-								castleMove.from = teamData.kingPos;
-								castleMove.to = castleMove.from + (i ? 2 : -2);
-								castleMove.resultPiece = PT_KING;
-								movesOut.push_back(castleMove);
+						if (canCastle) {
+							BitBoard castleEmptyMask = CASTLE_EMPTY_MASKS[team][i];
+							if ((combinedOccupy & castleEmptyMask) == 0) {
+								BitBoard castleSafetyMask = CASTLE_SAFETY_MASKS[team][i];
+								if ((castleSafetyMask & enemyTeamData.attack) == 0) {
+									BoardState::Move castleMove;
+									castleMove.from = teamData.kingPos;
+									castleMove.to = castleMove.from + (i ? 2 : -2);
+									castleMove.resultPiece = PT_KING;
+									movesOut.push_back(castleMove);
+								}
 							}
 						}
 					}

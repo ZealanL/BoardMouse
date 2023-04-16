@@ -39,7 +39,7 @@ void BoardState::UpdateAttacksAndPins(uint8_t team) {
 			case PT_ROOK:
 			{
 				BitBoard baseMoves;
-				LookupGen::GetRookMoves(i, etd.occupy, baseMoves, moves);
+				LookupGen::GetRookMoves(i, combinedOccupy & ~etd.kingPosMask, baseMoves, moves);
 
 				if (baseMoves & etd.kingPosMask)
 					fnUpdatePins(i);
@@ -48,21 +48,23 @@ void BoardState::UpdateAttacksAndPins(uint8_t team) {
 			case PT_BISHOP:
 			{
 				BitBoard baseMoves;
-				LookupGen::GetBishopMoves(i, etd.occupy, baseMoves, moves);
+				LookupGen::GetBishopMoves(i, combinedOccupy & ~etd.kingPosMask, baseMoves, moves);
 
 				if (baseMoves & etd.kingPosMask)
 					fnUpdatePins(i);
 			}
+			break;
 			case PT_QUEEN:
 			{
 				BitBoard baseMoves;
-				LookupGen::GetQueenMoves(i, etd.occupy, baseMoves, moves);
+				LookupGen::GetQueenMoves(i, combinedOccupy & ~etd.kingPosMask, baseMoves, moves);
 
 				if (baseMoves & etd.kingPosMask)
 					fnUpdatePins(i);
 			}
+			break;
 			default: // King
-				moves = LookupGen::GetKingMoves(i);;
+				moves = LookupGen::GetKingMoves(i);
 				td.attack |= LookupGen::GetKingMoves(i);
 			}
 
@@ -77,13 +79,17 @@ void BoardState::UpdateAttacksAndPins(uint8_t team) {
 	);
 }
 
-void BoardState::ExecuteMove(Move move, uint8_t team) {
-	auto& td = teamData[team];
-	auto& etd = teamData[!team];
+void BoardState::ExecuteMove(Move move) {
+	auto& td = teamData[turnTeam];
+	auto& etd = teamData[!turnTeam];
 
 	BitBoard fromMaskInv = ~(1ull << move.from), toMask = (1ull << move.to);
 
-	ASSERT(td.occupy[move.from] && !td.occupy[move.to]);
+#ifdef _DEBUG
+	if (!td.occupy[move.from] || td.occupy[move.to]) {
+		ERR_CLOSE("Tried to execute invalid move " << move << " on BoardState " << *this);
+	}
+#endif
 
 	// Update moved piece
 	pieceTypes[move.to] = move.resultPiece;
@@ -96,7 +102,7 @@ void BoardState::ExecuteMove(Move move, uint8_t team) {
 			enPassantToMask = 0;
 		} else if (abs(move.to - move.from) > BD_SIZE + 1) {
 			// Double pawn move, set en passant mask behind us
-			enPassantToMask = (team == TEAM_WHITE ? toMask >> BD_SIZE : toMask << BD_SIZE);
+			enPassantToMask = (turnTeam == TEAM_WHITE ? toMask >> BD_SIZE : toMask << BD_SIZE);
 			enPassantPawnPos = move.to;
 		} else {
 			enPassantToMask = 0;
@@ -132,5 +138,51 @@ void BoardState::ExecuteMove(Move move, uint8_t team) {
 	td.occupy |= toMask;
 	etd.occupy &= ~toMask;
 
-	UpdateAttacksAndPins(team);
+	UpdateAttacksAndPins(turnTeam);
+
+	turnTeam = !turnTeam;
+}
+
+std::ostream& operator <<(std::ostream& stream, const BoardState& boardState) {
+	stream << "{\n";
+	for (int y = BD_SIZE - 1; y >= 0; y--) {
+		for (int x = 0; x < BD_SIZE; x++) {
+
+			if (x > 0)
+				stream << ' ';
+
+			Pos pos = Pos(x, y);
+
+			bool isValid = true;
+			int squareTeam = -1;
+
+			for (int i = 0; i < 2; i++) {
+				if (boardState.teamData[i].occupy[pos]) {
+					if (squareTeam == -1) {
+						squareTeam = i;
+					} else {
+						isValid = false;
+					}
+				}
+			}
+
+			if (isValid) {
+				if (squareTeam != -1) {
+					char pieceChar = boardState.pieceTypes[pos];
+					if (squareTeam == TEAM_WHITE)
+						pieceChar = toupper(pieceChar);
+					
+					stream << pieceChar;
+				} else {
+					stream << '.';
+				}
+			} else {
+				stream << '?';
+			}
+		}
+		stream << std::endl;
+	}
+	stream << "}";
+
+	return stream;
 }

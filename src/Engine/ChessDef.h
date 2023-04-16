@@ -15,6 +15,9 @@ enum {
 	PT_AMOUNT
 };
 
+// NOTE: Lowercase
+constexpr const char PT_CHARS[PT_AMOUNT + 1] = "prnbqk";
+
 // Teams enum
 enum {
 	TEAM_WHITE = 0,

@@ -14,6 +14,11 @@ struct BoardState {
 
 		// Usually set to the piece we moved, except when promoting pawns
 		uint8_t resultPiece;
+
+		friend std::ostream& operator<<(std::ostream& stream, const Move& move) {
+			stream << "[from " << move.from << " to " << move.to << "]";
+			return stream;
+		}
 	};
 
 	struct TeamData {
@@ -65,8 +70,10 @@ struct BoardState {
 	Pos enPassantPawnPos;
 
 	// Run a move on the board, update accordingly
-	void ExecuteMove(Move move, uint8_t team);
+	void ExecuteMove(Move move);
 
 	// Update a team's attack and pin masks
 	void UpdateAttacksAndPins(uint8_t team);
+
+	friend std::ostream& operator <<(std::ostream& stream, const BoardState& boardState);
 };
