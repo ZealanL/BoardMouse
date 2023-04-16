@@ -146,6 +146,7 @@ void BoardState::ExecuteMove(Move move) {
 std::ostream& operator <<(std::ostream& stream, const BoardState& boardState) {
 	stream << "{\n";
 	for (int y = BD_SIZE - 1; y >= 0; y--) {
+		stream << "\t";
 		for (int x = 0; x < BD_SIZE; x++) {
 
 			if (x > 0)
@@ -168,7 +169,7 @@ std::ostream& operator <<(std::ostream& stream, const BoardState& boardState) {
 
 			if (isValid) {
 				if (squareTeam != -1) {
-					char pieceChar = boardState.pieceTypes[pos];
+					char pieceChar = PT_CHARS[boardState.pieceTypes[pos]];
 					if (squareTeam == TEAM_WHITE)
 						pieceChar = toupper(pieceChar);
 					
