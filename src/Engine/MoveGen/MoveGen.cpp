@@ -44,7 +44,10 @@ void AddMovesFromBB(Pos from, BitBoard toBB, uint8_t piece, vector<BoardState::M
 	});
 }
 
-void MoveGen::GetMovesForTeam(BoardState& board, uint8_t team, vector<BoardState::Move>& movesOut) {
+void MoveGen::GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
+
+	uint8_t team = board.turnTeam;
+
 	BitBoard teamOccupy = board.teamData[team].occupy;
 	BitBoard enemyOccupy = board.teamData[!team].occupy;
 	BitBoard combinedOccupy = teamOccupy | enemyOccupy;

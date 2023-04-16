@@ -5,5 +5,5 @@
 #define MAX_MOVES_PER_TURN 600
 
 namespace MoveGen {
-	void GetMovesForTeam(BoardState& board, uint8_t team, vector<BoardState::Move>& movesOut);
+	void GetMoves(BoardState& board, vector<BoardState::Move>& movesOut);
 }
