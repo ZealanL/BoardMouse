@@ -67,6 +67,13 @@ typedef uint8_t byte;
 #else
 #define DLOG(s) {}
 #endif
+
+#define ERR_CLOSE(s) { \
+	LOG("FATAL ERROR: " << s); \
+	assert(false); \
+	exit(EXIT_FAILURE); \
+}
+
 #pragma endregion
 
 #pragma region Assertions
