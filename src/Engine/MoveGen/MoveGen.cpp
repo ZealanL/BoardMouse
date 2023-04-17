@@ -77,7 +77,7 @@ void MoveGen::GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 
 	BitBoard checkBlockPathMask = BitBoard::Filled();
 	if (checkersAmount == 1)
-		checkBlockPathMask = LookupGen::GetPartialLineMask(enemyTeamData.firstCheckingPiecePos, teamData.kingPos);
+		checkBlockPathMask = LookupGen::GetPartialLineMask(enemyTeamData.firstCheckingPiecePos, teamData.kingPos) | enemyTeamData.checkers;
 
 	teamOccupy.Iterate(
 		[&](uint64_t _i) {
