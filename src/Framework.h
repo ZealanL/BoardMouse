@@ -107,3 +107,17 @@ inline vector<string> __SPLIT_STR(const string& str, const string& delim) {
 }
 
 #define SPLIT_STR __SPLIT_STR
+
+#ifdef _MSC_VER
+inline uint32_t __INTRIN_CTZ(uint64_t val) {
+	unsigned long result;
+	_BitScanForward64(&result, val);
+	return result;
+}
+#else
+inline uint32_t __INTRIN_CTZ(uint64_t val) {
+	return __builtin_ctzll(val);
+}
+#endif
+
+#define INTRIN_CTZ __INTRIN_CTZ

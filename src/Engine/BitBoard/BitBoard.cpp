@@ -45,21 +45,12 @@ uint64_t BitBoard::BitCount() const {
 	return __popcnt64(data);
 }
 
-// TODO: This can probably be made faster
 void BitBoard::Iterate(std::function<void(uint64_t)> func) const {
 	uint64_t dataCopy = this->data;
-	uint64_t bitCount = __popcnt64(dataCopy);
-	unsigned long curIndex = 0;
-
-	for (int i = 0; i < bitCount; i++) {
-		// Determine how many bits to walk forward
-		_BitScanReverse64(&curIndex, dataCopy);
-		
-		// Call with current index
-		func(curIndex);
-
-		// Remove the bit we just reached and continue
-		dataCopy -= 1ull << curIndex;
+	while (dataCopy) {
+		uint32_t i = INTRIN_CTZ(dataCopy);
+		func(i);
+		dataCopy &= dataCopy - 1;
 	}
 }
 
