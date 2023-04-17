@@ -188,7 +188,10 @@ void GenerateBetweenAndLineMasks() {
 			// Straight line path OR diagonal path
 			if ((dx == 0) != (dy == 0) || abs(dx) == abs(dy)) {
 
-				int step = POSI(dx / maxDimLen, dy / maxDimLen);
+				int 
+					dirX = dx / maxDimLen,
+					dirY = dy / maxDimLen;
+				int step = POSI(dirX, dirY);
 				
 				// Between path: Fill all squares between start and end point
 				for (Pos cur = from; cur != to; cur += step)
@@ -196,7 +199,7 @@ void GenerateBetweenAndLineMasks() {
 
 				// Line path: Follow both directions (forwards and backwards)
 				for (int dirSwitch = -1; dirSwitch <= 1; dirSwitch += 2) {
-					FillRay(lineMask, from, RayOffset{ dx * dirSwitch, dy * dirSwitch }, 0);
+					FillRay(lineMask, from, RayOffset{ dirX * dirSwitch, dirY * dirSwitch }, 0);
 
 					// Fill starting square
 					lineMask.Set(from, 1);
