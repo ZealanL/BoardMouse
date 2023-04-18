@@ -178,17 +178,25 @@ void BoardState::ExecuteMove(Move move) {
 		}
 	};
 
-	if (td.canCastle_Q && move.from == CASTLING_ROOK_LOCS[turnTeam][0])
-		td.canCastle_Q = false;
+	constexpr uint64_t 
+		CASTLING_ALL_ROOK_LOCS = ANI_BM('A1') | ANI_BM('H1') | ANI_BM('A8') | ANI_BM('H8'),
+		CASTLING_ALL_ROOK_LOCS_INV = ~CASTLING_ALL_ROOK_LOCS;
 
-	if (td.canCastle_K && move.from == CASTLING_ROOK_LOCS[turnTeam][1])
-		td.canCastle_K = false;
+	if (fromMaskInv & CASTLING_ALL_ROOK_LOCS_INV) {
+		if (td.canCastle_Q && move.from == CASTLING_ROOK_LOCS[turnTeam][0])
+			td.canCastle_Q = false;
 
-	if (etd.canCastle_Q && move.to == CASTLING_ROOK_LOCS[!turnTeam][0])
-		etd.canCastle_Q = false;
+		if (td.canCastle_K && move.from == CASTLING_ROOK_LOCS[turnTeam][1])
+			td.canCastle_K = false;
+	}
 
-	if (etd.canCastle_K && move.to == CASTLING_ROOK_LOCS[!turnTeam][1])
-		etd.canCastle_K = false;
+	if (toMask & CASTLING_ALL_ROOK_LOCS) {
+		if (etd.canCastle_Q && move.to == CASTLING_ROOK_LOCS[!turnTeam][0])
+			etd.canCastle_Q = false;
+
+		if (etd.canCastle_K && move.to == CASTLING_ROOK_LOCS[!turnTeam][1])
+			etd.canCastle_K = false;
+	}
 
 	// Update occupy
 	td.occupy &= fromMaskInv;

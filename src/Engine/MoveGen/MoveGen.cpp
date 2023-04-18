@@ -9,8 +9,6 @@ enum {
 	CASTLE_SIDE_AMOUNT
 };
 
-#define ANI_BM(chars) (1ull << (uint8_t)Pos::Read(chars))
-
 // These squares must be empty in order to castle
 constexpr uint64_t CASTLE_EMPTY_MASKS[TEAM_AMOUNT][CASTLE_SIDE_AMOUNT] = {
 		{ // White

@@ -55,3 +55,5 @@ struct Pos {
 
 // Convert string/chars to Pos
 #define ANI Pos::Read
+
+#define ANI_BM(chars) (1ull << (uint8_t)Pos::Read(chars))
