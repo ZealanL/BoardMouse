@@ -53,7 +53,7 @@ void AddMovesFromBB(Pos from, BitBoard toBB, uint8_t piece, vector<BoardState::M
 		}
 
 		out.push_back({ from, i, piece });
-	});
+		});
 }
 
 template <bool EN_PASSANT_AVAILABLE>
@@ -82,8 +82,6 @@ void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 		[&](uint64_t _i) {
 			Pos i = _i;
 
-			// TODO: switch/case instead of if/else
-
 			BitBoard moves;
 
 			uint8_t piece = board.pieceTypes[i];
@@ -91,7 +89,9 @@ void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 			if (multipleCheckers && piece != PT_KING)
 				return;
 
-			if (piece == PT_PAWN) {
+			switch (piece) {
+			case PT_PAWN:
+			{
 				// Removes the forward move if the square in front is occupied
 				BitBoard forwardMove = LookupGen::GetPawnMoves(i, team) & ~combinedOccupy;
 
@@ -161,25 +161,38 @@ void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 						moves |= attacks & board.enPassantToMask;
 					}
 				}
-			} else if (piece == PT_KNIGHT) {
+			}
+			break;
+			case PT_KNIGHT:
+			{
 				moves = LookupGen::GetKnightMoves(i) & ~teamOccupy & checkBlockPathMask;
-			} else if (piece == PT_ROOK) {
-
+			}
+			break;
+			case PT_ROOK:
+			{
 				BitBoard baseMoves, occludedMoves;
 				LookupGen::GetRookMoves(i, combinedOccupy, baseMoves, occludedMoves);
 				moves = occludedMoves & ~teamOccupy & checkBlockPathMask;
-
-			} else if (piece == PT_BISHOP) {
+			}
+			break;
+			case PT_BISHOP:
+			{
 
 				BitBoard baseMoves, occludedMoves;
 				LookupGen::GetBishopMoves(i, combinedOccupy, baseMoves, occludedMoves);
 				moves = occludedMoves & ~teamOccupy & checkBlockPathMask;
-
-			} else if (piece == PT_QUEEN) {
+			}
+			break;
+			case PT_QUEEN:
+			{
 				BitBoard baseMoves, occludedMoves;
 				LookupGen::GetQueenMoves(i, combinedOccupy, baseMoves, occludedMoves);
 				moves = occludedMoves & ~teamOccupy & checkBlockPathMask;
-			} else { // King
+			}
+			break;
+
+			default:
+			{ // King
 				moves = LookupGen::GetKingMoves(i) & ~teamOccupy & ~etd.attack;
 
 				// Castling
@@ -201,6 +214,7 @@ void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 						}
 					}
 				}
+			}
 			}
 
 			if (td.pinnedPieces[i])
