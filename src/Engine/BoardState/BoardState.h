@@ -5,7 +5,7 @@
 #define HALF_MOVE_DRAW_COUNT 100
 
 // TODO: Creates a bug somehow
-#define USE_PARTIAL_UPDATES
+//#define USE_PARTIAL_UPDATES
 
 // Stores all info for the state of a chess game
 struct BoardState {
