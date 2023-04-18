@@ -230,6 +230,7 @@ void GenerateUpdateMasks() {
 	for (Pos pos = 0; pos < BD_SQUARE_AMOUNT; pos++) {
 		BitBoard& mask = updateMasks[pos];
 		mask |= rookMoveLookup[pos];
+		mask |= bishopMoveLookup[pos];
 		mask |= knightMoveLookup[pos];
 		mask.Set(pos, true);
 	}
