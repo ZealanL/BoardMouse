@@ -27,7 +27,7 @@ struct BoardState {
 		// Has a single bit for the position of the king
 		BitBoard kingPosMask;
 
-		uint8_t kingPos; 
+		Pos kingPos; 
 
 		// What squares we have pieces in
 		BitBoard occupy;
