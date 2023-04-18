@@ -4,7 +4,8 @@
 
 #define HALF_MOVE_DRAW_COUNT 100
 
-#define PIN_DIR_AMOUNT 8
+// TODO: Creates a bug somehow
+#define USE_PARTIAL_UPDATES
 
 // Stores all info for the state of a chess game
 struct BoardState {
@@ -73,10 +74,11 @@ struct BoardState {
 	void ExecuteMove(Move move);
 
 	// Update a team's attack and pin masks, within an update mask
-	void UpdateAttacksAndPinsPartial(uint8_t team, BitBoard updateMask);
-	void UpdateAttacksAndPins(uint8_t team) {
-		UpdateAttacksAndPinsPartial(team, BitBoard::Filled());
-	}
+	void UpdateAttacksAndPins(uint8_t team
+#ifdef USE_PARTIAL_UPDATES
+		, BitBoard updateMask = BitBoard::Filled()
+#endif
+	);
 
 	friend std::ostream& operator <<(std::ostream& stream, const BoardState& boardState);
 };

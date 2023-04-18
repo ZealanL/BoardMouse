@@ -1,30 +1,42 @@
 #include "BoardState.h"
 #include "../LookupGen/LookupGen.h"
 
-void BoardState::UpdateAttacksAndPinsPartial(uint8_t team, BitBoard updateMask) {
+void BoardState::UpdateAttacksAndPins(uint8_t team
+#ifdef USE_PARTIAL_UPDATES
+	, BitBoard updateMask
+#endif
+	) {
 
+#ifdef USE_PARTIAL_UPDATES
 	BitBoard invUpdateMask = ~updateMask;
+#endif
 
 	auto& td = teamData[team];
 	auto& etd = teamData[!team];
 	BitBoard combinedOccupy = td.occupy | etd.occupy;
 
 	// Clear attacks/pins/checking pieces
+#ifdef USE_PARTIAL_UPDATES
 	td.attack &= invUpdateMask; 
 	etd.pinnedPieces &= invUpdateMask;
 	td.checkers &= invUpdateMask;
+#else
+	td.attack = etd.pinnedPieces = td.checkers = 0;
+#endif
 
 	const auto fnUpdatePins = [&](Pos pinnerPos) {
 		BitBoard betweenMask = LookupGen::GetBetweenMask(pinnerPos, etd.kingPos);
 		BitBoard pinnedEnemyPieces = betweenMask & etd.occupy;
 
-		if (pinnedEnemyPieces.BitCount() == 1) {
+		if (pinnedEnemyPieces.BitCount() == 1)
 			etd.pinnedPieces |= pinnedEnemyPieces;
-		}
 	};
 
 	// Loop over all of our pieces
-	BitBoard occupyUpdate = td.occupy & updateMask;
+	BitBoard occupyUpdate = td.occupy;
+#ifdef USE_PARTIAL_UPDATES
+	occupyUpdate &= updateMask;
+#endif
 	occupyUpdate.Iterate(
 		[&](uint64_t i) {
 			uint8_t pieceType = pieceTypes[i];
@@ -85,9 +97,6 @@ void BoardState::UpdateAttacksAndPinsPartial(uint8_t team, BitBoard updateMask) 
 	);
 }
 
-// TODO: Creates a bug somehow
-#define USE_PARTIAL_UPDATES
-
 void BoardState::ExecuteMove(Move move) {
 	auto& td = teamData[turnTeam];
 	auto& etd = teamData[!turnTeam];
@@ -100,6 +109,8 @@ void BoardState::ExecuteMove(Move move) {
 	}
 #endif
 
+	uint8_t piece = pieceTypes[move.from];
+
 	// Update moved piece
 	pieceTypes[move.to] = move.resultPiece;
 
@@ -108,7 +119,7 @@ void BoardState::ExecuteMove(Move move) {
 #endif
 
 	// En passant capture
-	if (move.resultPiece == PT_PAWN) {
+	if (piece == PT_PAWN) {
 		if (toMask == enPassantToMask) {
 			// Remove piece behind our pawn
 			etd.occupy.Set(enPassantPawnPos, 0);
@@ -129,7 +140,7 @@ void BoardState::ExecuteMove(Move move) {
 	} else {
 		enPassantToMask = 0;
 
-		if (move.resultPiece == PT_KING) {
+		if (piece == PT_KING) {
 			{ // Update king pos
 				td.kingPos = move.to;
 				td.kingPosMask = toMask;
@@ -161,7 +172,7 @@ void BoardState::ExecuteMove(Move move) {
 	td.occupy |= toMask;
 	etd.occupy &= ~toMask;
 #ifdef USE_PARTIAL_UPDATES
-	UpdateAttacksAndPinsPartial(turnTeam, updateMask);
+	UpdateAttacksAndPins(turnTeam, updateMask);
 #else
 	UpdateAttacksAndPins(turnTeam);
 #endif;
