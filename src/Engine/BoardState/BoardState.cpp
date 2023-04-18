@@ -167,6 +167,29 @@ void BoardState::ExecuteMove(Move move) {
 		}
 	}
 
+	// Order: Queen-side, King-side
+	constexpr uint8_t CASTLING_ROOK_LOCS[TEAM_AMOUNT][2] = {
+		{ // White 
+			ANI('A1'), ANI('H1')
+		},
+
+		{ // Black
+			ANI('A8'), ANI('H8')
+		}
+	};
+
+	if (td.canCastle_Q && move.from == CASTLING_ROOK_LOCS[turnTeam][0])
+		td.canCastle_Q = false;
+
+	if (td.canCastle_K && move.from == CASTLING_ROOK_LOCS[turnTeam][1])
+		td.canCastle_K = false;
+
+	if (etd.canCastle_Q && move.to == CASTLING_ROOK_LOCS[!turnTeam][0])
+		etd.canCastle_Q = false;
+
+	if (etd.canCastle_K && move.to == CASTLING_ROOK_LOCS[!turnTeam][1])
+		etd.canCastle_K = false;
+
 	// Update occupy
 	td.occupy &= fromMaskInv;
 	td.occupy |= toMask;
