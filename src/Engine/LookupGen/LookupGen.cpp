@@ -40,6 +40,10 @@ static BitBoard lineMasks[BD_SQUARE_AMOUNT][BD_SQUARE_AMOUNT];
 // Memory size: Negligible
 static BitBoard partialLineMasks[BD_SQUARE_AMOUNT][BD_SQUARE_AMOUNT];
 
+// Masks of all moves for any piece from the current location (aka queen|knight), including the current location
+// Memory size: Negligible
+static BitBoard updateMasks[BD_SQUARE_AMOUNT];
+
 void GenerateNonSlidingPieceMoves(bool isKing) {
 	pair<int, int>
 		kingMoveOffsets[8] = {
@@ -220,6 +224,17 @@ void GenerateBetweenAndLineMasks() {
 	}
 }
 
+void GenerateUpdateMasks() {
+	memset(updateMasks, 0, sizeof(updateMasks));
+
+	for (Pos pos = 0; pos < BD_SQUARE_AMOUNT; pos++) {
+		BitBoard& mask = updateMasks[pos];
+		mask |= rookMoveLookup[pos];
+		mask |= knightMoveLookup[pos];
+		mask.Set(pos, true);
+	}
+}
+
 void LookupGen::InitOnce() {
 	LOG("Initializing lookup data...");
 	{ // Only run once
@@ -245,21 +260,39 @@ void LookupGen::InitOnce() {
 	DLOG(" > Generating between-masks and line-masks...");
 	GenerateBetweenAndLineMasks();
 
+	DLOG(" > Generating update masks...");
+	GenerateUpdateMasks();
+
 	DLOG(" > Done!");
 }
 
+BitBoard LookupGen::GetRookBaseMoves(Pos rookPos) {
+	return rookMoveLookup[rookPos];
+}
+
 void LookupGen::GetRookMoves(Pos rookPos, BitBoard occupiedMask, BitBoard& outBaseMoves, BitBoard& outOccludedMoves) {
-	BitBoard baseMoves = rookMoveLookup[rookPos];
+	BitBoard baseMoves = GetRookBaseMoves(rookPos);
 	outBaseMoves = baseMoves;
 	BitBoard occlusionBits = occupiedMask.ExtractBits(baseMoves);
 	outOccludedMoves = rookOcclusionLookup[rookPos][occlusionBits];
 }
 
+BitBoard LookupGen::GetBishopBaseMoves(Pos rookPos) {
+	return bishopMoveLookup[rookPos];
+}
+
 void LookupGen::GetBishopMoves(Pos bishopPos, BitBoard occupiedMask, BitBoard& outBaseMoves, BitBoard& outOccludedMoves) {
-	BitBoard baseMoves = bishopMoveLookup[bishopPos];
+	BitBoard baseMoves = GetBishopBaseMoves(bishopPos);
 	outBaseMoves = baseMoves;
 	BitBoard occlusionBits = occupiedMask.ExtractBits(baseMoves);
 	outOccludedMoves = bishopOcclusionLookup[bishopPos][occlusionBits];
+}
+
+BitBoard LookupGen::GetQueenBaseMoves(Pos queenPos) {
+	BitBoard
+		baseMoves_R = rookMoveLookup[queenPos],
+		baseMoves_B = bishopMoveLookup[queenPos];
+	return baseMoves_R | baseMoves_B;
 }
 
 void LookupGen::GetQueenMoves(Pos queenPos, BitBoard occupiedMask, BitBoard& outBaseMoves, BitBoard& outOccludedMoves) {
@@ -303,4 +336,8 @@ BitBoard LookupGen::GetPartialLineMask(Pos from, Pos to) {
 
 BitBoard LookupGen::GetBetweenMask(Pos from, Pos to) {
 	return betweenMasks[from.index][to.index];
+}
+
+BitBoard LookupGen::GetUpdateMask(Pos pos) {
+	return updateMasks[pos];
 }

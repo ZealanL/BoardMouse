@@ -1,13 +1,18 @@
 #include "BoardState.h"
 #include "../LookupGen/LookupGen.h"
 
-void BoardState::UpdateAttacksAndPins(uint8_t team) {
+void BoardState::UpdateAttacksAndPinsPartial(uint8_t team, BitBoard updateMask) {
+
+	BitBoard invUpdateMask = ~updateMask;
+
 	auto& td = teamData[team];
 	auto& etd = teamData[!team];
 	BitBoard combinedOccupy = td.occupy | etd.occupy;
 
 	// Clear attacks/pins/checking pieces
-	td.attack = etd.pinnedPieces = td.checkers = 0;
+	td.attack &= invUpdateMask; 
+	etd.pinnedPieces &= invUpdateMask;
+	td.checkers &= invUpdateMask;
 
 	const auto fnUpdatePins = [&](Pos pinnerPos) {
 		BitBoard betweenMask = LookupGen::GetBetweenMask(pinnerPos, etd.kingPos);
@@ -19,7 +24,8 @@ void BoardState::UpdateAttacksAndPins(uint8_t team) {
 	};
 
 	// Loop over all of our pieces
-	td.occupy.Iterate(
+	BitBoard occupyUpdate = td.occupy & updateMask;
+	occupyUpdate.Iterate(
 		[&](uint64_t i) {
 			uint8_t pieceType = pieceTypes[i];
 
@@ -79,6 +85,9 @@ void BoardState::UpdateAttacksAndPins(uint8_t team) {
 	);
 }
 
+// TODO: Creates a bug somehow
+#define USE_PARTIAL_UPDATES
+
 void BoardState::ExecuteMove(Move move) {
 	auto& td = teamData[turnTeam];
 	auto& etd = teamData[!turnTeam];
@@ -94,11 +103,21 @@ void BoardState::ExecuteMove(Move move) {
 	// Update moved piece
 	pieceTypes[move.to] = move.resultPiece;
 
+#ifdef USE_PARTIAL_UPDATES
+	BitBoard updateMask = LookupGen::GetUpdateMask(move.from) | LookupGen::GetUpdateMask(move.to);
+#endif
+
 	// En passant capture
 	if (move.resultPiece == PT_PAWN) {
 		if (toMask == enPassantToMask) {
 			// Remove piece behind our pawn
 			etd.occupy.Set(enPassantPawnPos, 0);
+#ifdef USE_PARTIAL_UPDATES
+			updateMask |= LookupGen::GetUpdateMask(enPassantPawnPos);
+			updateMask |= LookupGen::GetUpdateMask(
+				enPassantPawnPos.index + (turnTeam == TEAM_WHITE ? -BD_SIZE : BD_SIZE)
+			);
+#endif
 			enPassantToMask = 0;
 		} else if (abs(move.to - move.from) > BD_SIZE + 1) {
 			// Double pawn move, set en passant mask behind us
@@ -129,6 +148,10 @@ void BoardState::ExecuteMove(Move move) {
 				pieceTypes[rookToPos] = PT_ROOK;
 				td.occupy &= ~(1ull << rookFromPos);
 				td.occupy |= (1ull << rookToPos);
+#ifdef USE_PARTIAL_UPDATES
+				updateMask |= LookupGen::GetUpdateMask(rookFromPos);
+				updateMask |= LookupGen::GetUpdateMask(rookToPos);
+#endif
 			}
 		}
 	}
@@ -137,9 +160,11 @@ void BoardState::ExecuteMove(Move move) {
 	td.occupy &= fromMaskInv;
 	td.occupy |= toMask;
 	etd.occupy &= ~toMask;
-
+#ifdef USE_PARTIAL_UPDATES
+	UpdateAttacksAndPinsPartial(turnTeam, updateMask);
+#else
 	UpdateAttacksAndPins(turnTeam);
-
+#endif;
 	turnTeam = !turnTeam;
 }
 

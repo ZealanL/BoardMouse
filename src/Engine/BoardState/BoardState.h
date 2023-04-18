@@ -72,8 +72,11 @@ struct BoardState {
 	// Run a move on the board, update accordingly
 	void ExecuteMove(Move move);
 
-	// Update a team's attack and pin masks
-	void UpdateAttacksAndPins(uint8_t team);
+	// Update a team's attack and pin masks, within an update mask
+	void UpdateAttacksAndPinsPartial(uint8_t team, BitBoard updateMask);
+	void UpdateAttacksAndPins(uint8_t team) {
+		UpdateAttacksAndPinsPartial(team, BitBoard::Filled());
+	}
 
 	friend std::ostream& operator <<(std::ostream& stream, const BoardState& boardState);
 };

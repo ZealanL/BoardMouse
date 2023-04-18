@@ -6,6 +6,10 @@ namespace LookupGen {
 	// Can be called only once, initializes all lookup data
 	void InitOnce();
 
+	BitBoard GetRookBaseMoves(Pos rookPos);
+	BitBoard GetBishopBaseMoves(Pos rookPos);
+	BitBoard GetQueenBaseMoves(Pos queenPos);
+
 	void GetRookMoves(Pos rookPos, BitBoard occupiedMask, BitBoard& outBaseMoves, BitBoard& outOccludedMoves);
 	void GetBishopMoves(Pos bishopPos, BitBoard occupiedMask, BitBoard& outBaseMoves, BitBoard& outOccludedMoves);
 	void GetQueenMoves(Pos queenPos, BitBoard occupiedMask, BitBoard& outBaseMoves, BitBoard& outOccludedMoves);
@@ -24,4 +28,5 @@ namespace LookupGen {
 	BitBoard GetPartialLineMask(Pos from, Pos to);
 
 	BitBoard GetBetweenMask(Pos from, Pos to);
+	BitBoard GetUpdateMask(Pos pos);
 }

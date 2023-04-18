@@ -45,15 +45,6 @@ uint64_t BitBoard::BitCount() const {
 	return __popcnt64(data);
 }
 
-void BitBoard::Iterate(std::function<void(uint64_t)> func) const {
-	uint64_t dataCopy = this->data;
-	while (dataCopy) {
-		uint32_t i = INTRIN_CTZ(dataCopy);
-		func(i);
-		dataCopy &= dataCopy - 1;
-	}
-}
-
 std::ostream& operator<<(std::ostream& stream, const BitBoard& bitBoard) {
 	stream << " {" << std::endl;
 	for (int y = 0; y < 8; y++) {

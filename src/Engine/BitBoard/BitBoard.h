@@ -40,7 +40,15 @@ struct BitBoard {
 
 	// Runs a function on any 1-bit in this mask
 	// Function is called with current index as the argument
-	void Iterate(std::function<void(uint64_t)> func) const;
+	template <typename F>
+	void Iterate(F&& func) const {
+		uint64_t dataCopy = this->data;
+		while (dataCopy) {
+			uint32_t i = INTRIN_CTZ(dataCopy);
+			func(i);
+			dataCopy &= dataCopy - 1;
+		}
+	}
 
 	friend std::ostream& operator<<(std::ostream& stream, const BitBoard& bitBoard);
 };
