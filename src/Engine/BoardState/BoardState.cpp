@@ -148,7 +148,7 @@ void BoardState::ExecuteMove(Move move) {
 			}
 
 			int xDelta = move.to.X() - move.from.X();
-			if ((xDelta & 1) == 0) {
+			if (xDelta && ((xDelta & 1) == 0)) {
 				int castleIndex = xDelta > 0;
 				uint8_t castleFromX = (xDelta > 0 ? BD_SIZE - 1 : 0);
 
