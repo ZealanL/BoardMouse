@@ -198,7 +198,7 @@ void GenerateBetweenAndLineMasks() {
 				int step = POSI(dirX, dirY);
 				
 				// Between path: Fill all squares between start and end point
-				for (Pos cur = from; cur != to; cur += step)
+				for (Pos cur = from + step; cur != to; cur += step)
 					betweenMask.Set(cur, 1);
 
 				// Line path: Follow both directions (forwards and backwards)
