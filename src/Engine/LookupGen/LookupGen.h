@@ -29,4 +29,5 @@ namespace LookupGen {
 
 	BitBoard GetBetweenMask(Pos from, Pos to);
 	BitBoard GetUpdateMask(Pos pos);
+	BitBoard GetRankMask(Pos pos);
 }

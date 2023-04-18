@@ -1,5 +1,6 @@
 #include "LookupGen.h"
 
+// Base moves for each piece
 // Memory size: Negligible
 static BitBoard
 	kingMoveLookup[BD_SQUARE_AMOUNT],
@@ -10,7 +11,9 @@ static BitBoard
 // Lookup for the move or attack possibilities for any pawn in any position, for either team
 // NOTE: Ignores occlusion and attack availability, that is done elsewhere
 // Memory sizes: Negligible
-static BitBoard pawnMoveLookup[TEAM_AMOUNT][BD_SQUARE_AMOUNT], pawnAttackLookup[TEAM_AMOUNT][BD_SQUARE_AMOUNT];
+static BitBoard 
+	pawnMoveLookup[TEAM_AMOUNT][BD_SQUARE_AMOUNT], 
+	pawnAttackLookup[TEAM_AMOUNT][BD_SQUARE_AMOUNT];
 
 // The number of entries in a slider's occlusion lookup array
 // Since the bit where the slider is present is ignored, there are 7 possible blocking spaces
@@ -43,6 +46,10 @@ static BitBoard partialLineMasks[BD_SQUARE_AMOUNT][BD_SQUARE_AMOUNT];
 // Masks of all moves for any piece from the current location (aka queen|knight), including the current location
 // Memory size: Negligible
 static BitBoard updateMasks[BD_SQUARE_AMOUNT];
+
+// Mask of the entire rank
+// Memory size: Negligible
+static BitBoard rankMasks[BD_SQUARE_AMOUNT];
 
 void GenerateNonSlidingPieceMoves(bool isKing) {
 	pair<int, int>
@@ -236,6 +243,19 @@ void GenerateUpdateMasks() {
 	}
 }
 
+void GenerateRankMasks() {
+	memset(rankMasks, 0, sizeof(updateMasks));
+
+	for (Pos pos = 0; pos < BD_SQUARE_AMOUNT; pos++) {
+		BitBoard& mask = rankMasks[pos];
+
+		for (int x = 0; x < BD_SIZE; x++)
+			mask.Set(Pos(x, pos.Y()), true);
+
+		mask.Set(pos, true);
+	}
+}
+
 void LookupGen::InitOnce() {
 	LOG("Initializing lookup data...");
 	{ // Only run once
@@ -263,6 +283,9 @@ void LookupGen::InitOnce() {
 
 	DLOG(" > Generating update masks...");
 	GenerateUpdateMasks();
+
+	DLOG(" > Generating rank masks...");
+	GenerateRankMasks();
 
 	DLOG(" > Done!");
 }
@@ -341,4 +364,9 @@ BitBoard LookupGen::GetBetweenMask(Pos from, Pos to) {
 
 BitBoard LookupGen::GetUpdateMask(Pos pos) {
 	return updateMasks[pos];
+}
+
+BitBoard LookupGen::GetRankMask(Pos pos) {
+	// TODO: Non-lookup is maybe faster?
+	return rankMasks[pos];
 }
