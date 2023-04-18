@@ -58,7 +58,8 @@ void AddMovesFromBB(Pos from, BitBoard toBB, uint8_t piece, vector<BoardState::M
 	});
 }
 
-void MoveGen::GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
+template <bool EN_PASSANT_AVAILABLE>
+void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 
 	uint8_t team = board.turnTeam;
 
@@ -106,56 +107,61 @@ void MoveGen::GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 				// Only adds attacks that are to squares with an enemy piece
 				BitBoard baseAttacks = LookupGen::GetPawnAttacks(i, team);
 				BitBoard attacks = baseAttacks & etd.occupy;
-				if (baseAttacks & board.enPassantToMask) {
-					if (!td.pinnedPieces[board.enPassantPawnPos]) {
-						if (td.kingPos.Y() == moveFromY) {
-							// We need to make sure this en passant capture wont reveal a check
 
-							int enemyPiecesOnRankAmount = BitBoard(LookupGen::GetRankMask(i) & etd.occupy).BitCount();
+				if constexpr (EN_PASSANT_AVAILABLE) {
+					if (baseAttacks & board.enPassantToMask) {
+						if (!td.pinnedPieces[board.enPassantPawnPos]) {
+							if (td.kingPos.Y() == moveFromY) {
+								// We need to make sure this en passant capture wont reveal a check
 
-							if (enemyPiecesOnRankAmount > 1) {
-								int kingPosX = td.kingPos.X();
-								int moveFromX = i.X();
-								int moveToX = board.enPassantPawnPos.X();
-								int potentialRevealedDirX = (moveFromX < kingPosX) ? 1 : -1;
-								int stopX = (potentialRevealedDirX > 0) ? BD_SIZE : -1;
-								bool wouldRevealKingAttack = false;
+								int enemyPiecesOnRankAmount = BitBoard(LookupGen::GetRankMask(i) & etd.occupy).BitCount();
 
-								// TODO: Make more efficient
-								for (int x = kingPosX - potentialRevealedDirX; x != stopX; x -= potentialRevealedDirX) {
-									if (x == moveFromX || x == moveToX)
-										continue;
+								if (enemyPiecesOnRankAmount > 1) {
+									int kingPosX = td.kingPos.X();
+									int moveFromX = i.X();
+									int moveToX = board.enPassantPawnPos.X();
+									int potentialRevealedDirX = (moveFromX < kingPosX) ? 1 : -1;
+									int stopX = (potentialRevealedDirX > 0) ? BD_SIZE : -1;
+									bool wouldRevealKingAttack = false;
 
-									Pos pos = Pos(x, moveFromY);
-									if (combinedOccupy[pos]) {
-										if (etd.occupy[pos]) {
-											uint8_t enemyPieceType = board.pieceTypes[pos];
-											wouldRevealKingAttack = (enemyPieceType == PT_ROOK || enemyPieceType == PT_QUEEN);
+									// TODO: Make more efficient
+									for (int x = kingPosX - potentialRevealedDirX; x != stopX; x -= potentialRevealedDirX) {
+										if (x == moveFromX || x == moveToX)
+											continue;
+
+										Pos pos = Pos(x, moveFromY);
+										if (combinedOccupy[pos]) {
+											if (etd.occupy[pos]) {
+												uint8_t enemyPieceType = board.pieceTypes[pos];
+												wouldRevealKingAttack = (enemyPieceType == PT_ROOK || enemyPieceType == PT_QUEEN);
+											}
+
+											break;
 										}
-
-										break;
 									}
-								}
 
-								if (!wouldRevealKingAttack) {
+									if (!wouldRevealKingAttack) {
+										attacks |= board.enPassantToMask;
+									}
+
+								} else {
 									attacks |= board.enPassantToMask;
 								}
 
 							} else {
 								attacks |= board.enPassantToMask;
 							}
-
-						} else {
-							attacks |= board.enPassantToMask;
 						}
 					}
 				}
 
 				moves = (forwardMove | attacks) & checkBlockPathMask;
-				
-				// FIX FOR SPECIAL CASE: Allow en passant to capture a checking pawn
-				if (checkersAmount && etd.firstCheckingPiecePos == board.enPassantPawnPos) {
-					moves |= attacks & board.enPassantToMask;
+
+				if constexpr (EN_PASSANT_AVAILABLE) {
+					// FIX FOR SPECIAL CASE: Allow en passant to capture a checking pawn
+					if (checkersAmount && etd.firstCheckingPiecePos == board.enPassantPawnPos) {
+						moves |= attacks & board.enPassantToMask;
+					}
 				}
 			} else if (piece == PT_KNIGHT) {
 				moves = LookupGen::GetKnightMoves(i) & ~teamOccupy & checkBlockPathMask;
@@ -209,4 +215,12 @@ void MoveGen::GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 			}
 		}
 	);
+}
+
+void MoveGen::GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
+	if (board.enPassantToMask) {
+		_GetMoves<true>(board, movesOut);
+	} else {
+		_GetMoves<false>(board, movesOut);
+	}
 }
