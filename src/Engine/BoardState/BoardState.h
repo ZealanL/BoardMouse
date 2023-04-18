@@ -35,8 +35,9 @@ struct BoardState {
 		// What squares we can attack
 		BitBoard attack;
 
-		// What pieces of ours block a sliding piece from attacking our king
+		// What pieces block a sliding piece from attacking our king
 		// Only counts if the piece is the only blocker of that path
+		// NOTE: Includes enemy pieces
 		BitBoard pinnedPieces;
 
 		// Pieces that check the enemy king

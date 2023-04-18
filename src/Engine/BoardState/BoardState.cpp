@@ -26,10 +26,10 @@ void BoardState::UpdateAttacksAndPins(uint8_t team
 
 	const auto fnUpdatePins = [&](Pos pinnerPos) {
 		BitBoard betweenMask = LookupGen::GetBetweenMask(pinnerPos, etd.kingPos);
-		BitBoard pinnedEnemyPieces = betweenMask & etd.occupy;
+		BitBoard pinnedPieces = betweenMask & combinedOccupy;
 
-		if (pinnedEnemyPieces.BitCount() == 1)
-			etd.pinnedPieces |= pinnedEnemyPieces;
+		if (pinnedPieces.BitCount() == 1)
+			etd.pinnedPieces |= pinnedPieces;
 	};
 
 	// Loop over all of our pieces
