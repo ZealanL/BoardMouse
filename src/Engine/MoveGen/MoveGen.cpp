@@ -232,10 +232,12 @@ FINLINE void _GetMoves(BoardState& board, uint64_t checkersAmount, CALLBACK call
 					if ((combinedOccupy & castleEmptyMask) == 0) {
 						BitBoard castleSafetyMask = CASTLE_SAFETY_MASKS[TEAM][i];
 						if ((castleSafetyMask & etd.attack) == 0) {
-							BoardState::Move castleMove;
-							castleMove.from = td.kingPos;
-							castleMove.to = castleMove.from + (i ? 2 : -2);
-							castleMove.resultPiece = PT_KING;
+							BoardState::Move castleMove = {
+								td.kingPos,
+								td.kingPos + (i ? 2 : -2),
+								PT_ROOK,
+								PT_ROOK
+							};
 							callback(castleMove);
 						}
 					}
