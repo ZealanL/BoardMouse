@@ -119,6 +119,9 @@ FINLINE uint64_t __INTRIN_PEXT(uint64_t data, uint64_t mask) {
 FINLINE uint64_t __INTRIN_PDEP(uint64_t data, uint64_t mask) {
 	return _pdep_u64(data, mask);
 }
+FINLINE uint64_t __INTRIN_BLSR(uint64_t val) {
+	return _blsr_u64(val);
+}
 #else
 FINLINE uint32_t __INTRIN_CTZ(uint64_t val) {
 	return __builtin_ctzll(val);
@@ -129,13 +132,12 @@ FINLINE uint64_t __INTRIN_PEXT(uint64_t data, uint64_t mask) {
 FINLINE uint64_t __INTRIN_PDEP(uint64_t data, uint64_t mask) {
 	return __builtin_ia32_pdep_di(data, mask);
 }
-#endif
-
-FINLINE uint64_t __INTRIN_BSLR(uint64_t data) {
-	return _blsr_u64(data);
+FINLINE uint64_t __INTRIN_BLSR(uint64_t val) {
+	return val & (val - 1);
 }
+#endif
 
 #define INTRIN_CTZ __INTRIN_CTZ
 #define INTRIN_PEXT __INTRIN_PEXT
 #define INTRIN_PDEP __INTRIN_PDEP
-#define INTRIN_BSLR __INTRIN_BSLR
+#define INTRIN_BLSR __INTRIN_BLSR

@@ -77,7 +77,7 @@ struct BitBoard {
 		while (dataCopy) {
 			uint32_t i = INTRIN_CTZ(dataCopy);
 			func(i);
-			dataCopy = INTRIN_BSLR(dataCopy);
+			dataCopy = INTRIN_BLSR(dataCopy);
 		}
 	}
 
