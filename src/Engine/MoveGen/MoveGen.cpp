@@ -61,22 +61,28 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut, ui
 	auto& td = board.teamData[TEAM];
 	auto& etd = board.teamData[!TEAM];
 
-	BitBoard teamOccupy = td.occupy;
-	BitBoard enemyOccupy = etd.occupy;
+	BitBoard
+		teamOccupy = td.occupy,
+		teamOccupyInv = ~teamOccupy,
+		enemyOccupy = etd.occupy;
 	BitBoard combinedOccupy = teamOccupy | enemyOccupy;
 
-	BitBoard checkBlockPathMask = BitBoard::Filled();
-	if (checkersAmount == 1)
-		checkBlockPathMask = LookupGen::GetPartialLineMask(etd.firstCheckingPiecePos, td.kingPos) | etd.checkers;
-
 	if constexpr (!ONLY_KING_MOVES) {
+
+		BitBoard checkBlockPathMask = BitBoard::Filled();
+		if (checkersAmount == 1)
+			checkBlockPathMask = LookupGen::GetPartialLineMask(etd.firstCheckingPiecePos, td.kingPos) | etd.checkers;
+
+		BitBoard normalMoveMask = checkBlockPathMask & teamOccupyInv;
+
+		BitBoard pinnedPieces = td.pinnedPieces;
 
 		uint8_t teamDir = (TEAM == TEAM_WHITE) ? 1 : -1;
 		uint8_t pawnRowY = (TEAM == TEAM_WHITE) ? 1 : 6;
 
 		BitBoard pieces;
 		
-		pieces = td.pieceSets[PT_PAWN] & td.occupy;
+		pieces = td.pieceSets[PT_PAWN] & teamOccupy;
 		pieces.Iterate(
 			[&](uint64_t _i) {
 				Pos i = _i;
@@ -93,11 +99,11 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut, ui
 
 				// Only adds attacks that are to squares with an enemy piece
 				BitBoard baseAttacks = LookupGen::GetPawnAttacks(i, TEAM);
-				BitBoard attacks = baseAttacks & etd.occupy;
+				BitBoard attacks = baseAttacks & enemyOccupy;
 
 				if constexpr (EN_PASSANT_AVAILABLE) {
 					if (baseAttacks & board.enPassantToMask) {
-						if (!td.pinnedPieces[board.enPassantPawnPos]) {
+						if (!pinnedPieces[board.enPassantPawnPos]) {
 							if (td.kingPos.Y() == moveFromY) {
 								// We need to make sure this en passant capture wont reveal a check
 
@@ -150,44 +156,44 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut, ui
 					}
 				}
 
-				if (td.pinnedPieces[i])
+				if (pinnedPieces[i])
 					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
 				AddMovesFromBB<PT_PAWN>(i, moves, movesOut);
 			}
 		);
 
-		pieces = td.pieceSets[PT_ROOK] & td.occupy;
+		pieces = td.pieceSets[PT_ROOK] & teamOccupy;
 		pieces.Iterate(
 			[&](uint64_t i) {
 				BitBoard baseMoves, moves;
 				LookupGen::GetRookMoves(i, combinedOccupy, baseMoves, moves);
-				moves = moves & ~teamOccupy & checkBlockPathMask;
-				if (td.pinnedPieces[i])
+				moves &= normalMoveMask;
+				if (pinnedPieces[i])
 					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
 				AddMovesFromBB<PT_ROOK>(i, moves, movesOut);
 			}
 		);
 
-		pieces = td.pieceSets[PT_KNIGHT] & td.occupy;
+		pieces = td.pieceSets[PT_KNIGHT] & teamOccupy;
 		pieces.Iterate(
 			[&](uint64_t i) {
-				BitBoard moves = LookupGen::GetKnightMoves(i) & ~teamOccupy & checkBlockPathMask;
-				if (td.pinnedPieces[i])
+				BitBoard moves = LookupGen::GetKnightMoves(i) & normalMoveMask;
+				if (pinnedPieces[i])
 					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
 				AddMovesFromBB<PT_KNIGHT>(i, moves, movesOut);
 			}
 		);
 
-		pieces = td.pieceSets[PT_BISHOP] & td.occupy;
+		pieces = td.pieceSets[PT_BISHOP] & teamOccupy;
 		pieces.Iterate(
 			[&](uint64_t i) {
 				BitBoard baseMoves, moves;
 				LookupGen::GetBishopMoves(i, combinedOccupy, baseMoves, moves);
-				moves = moves & ~teamOccupy & checkBlockPathMask;
-				if (td.pinnedPieces[i])
+				moves &= normalMoveMask;
+				if (pinnedPieces[i])
 					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
 				AddMovesFromBB<PT_BISHOP>(i, moves, movesOut);
@@ -199,8 +205,8 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut, ui
 			[&](uint64_t i) {
 				BitBoard baseMoves, moves;
 				LookupGen::GetQueenMoves(i, combinedOccupy, baseMoves, moves);
-				moves = moves & ~teamOccupy & checkBlockPathMask;
-				if (td.pinnedPieces[i])
+				moves &= normalMoveMask;
+				if (pinnedPieces[i])
 					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
 				AddMovesFromBB<PT_QUEEN>(i, moves, movesOut);
@@ -209,7 +215,7 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut, ui
 	}
 
 	{ // King
-		BitBoard moves = LookupGen::GetKingMoves(td.kingPos) & ~teamOccupy & ~etd.attack;
+		BitBoard moves = LookupGen::GetKingMoves(td.kingPos) & teamOccupyInv & ~etd.attack;
 
 		// Castling
 		if (checkersAmount == 0) {
