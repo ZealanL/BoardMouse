@@ -4,8 +4,6 @@
 
 #define HALF_MOVE_DRAW_COUNT 100
 
-// TODO: Creates a bug somehow
-//#define USE_PARTIAL_UPDATES
 //#define UPDATE_VALUES
 
 // Stores all info for the state of a chess game
@@ -13,6 +11,9 @@ struct BoardState {
 
 	struct Move {
 		Pos from, to;
+
+		// Piece we moved
+		uint8_t originalPiece;
 
 		// Usually set to the piece we moved, except when promoting pawns
 		uint8_t resultPiece;
@@ -24,14 +25,12 @@ struct BoardState {
 	};
 
 	struct TeamData {
-
-		// Has a single bit for the position of the king
-		BitBoard kingPosMask;
-
 		Pos kingPos; 
 
 		// What squares we have pieces in
 		BitBoard occupy;
+
+		BitBoard pieceSets[PT_AMOUNT];
 
 		// What squares we can attack
 		BitBoard attack;
@@ -64,9 +63,6 @@ struct BoardState {
 	// Team who's turn it is
 	uint8_t turnTeam = TEAM_WHITE;
 
-	// What pieces are at what positions
-	uint8_t pieceTypes[BD_SQUARE_AMOUNT];
-
 	// Normally blank, has a single bit on when en passant is possible
 	BitBoard enPassantToMask;
 
@@ -84,11 +80,7 @@ struct BoardState {
 	void ExecuteMove(Move move);
 
 	// Update a team's attack and pin masks, within an update mask
-	void UpdateAttacksAndPins(uint8_t team
-#ifdef USE_PARTIAL_UPDATES
-		, BitBoard updateMask = BitBoard::Filled()
-#endif
-	);
+	void UpdateAttacksAndPins(uint8_t team);
 
 	friend std::ostream& operator <<(std::ostream& stream, const BoardState& boardState);
 };

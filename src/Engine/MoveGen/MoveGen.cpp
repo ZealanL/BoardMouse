@@ -35,25 +35,25 @@ constexpr uint64_t CASTLE_SAFETY_MASKS[TEAM_AMOUNT][CASTLE_SIDE_AMOUNT] = {
 	}
 };
 
-template <bool IS_PAWN>
-FINLINE void AddMovesFromBB(Pos from, BitBoard toBB, uint8_t piece, vector<BoardState::Move>& out) {
+template <uint8_t PIECE_TYPE>
+FINLINE void AddMovesFromBB(Pos from, BitBoard toBB, vector<BoardState::Move>& out) {
 	toBB.Iterate([&](Pos i) {
 
 		// Promotion check
-		if (IS_PAWN) {
+		if constexpr (PIECE_TYPE == PT_PAWN) {
 			uint8_t y = i.Y();
 			if (y == 0 || y == (BD_SIZE - 1)) {
 				// Promotion
-				out.push_back({ from, i, PT_KNIGHT });
-				out.push_back({ from, i, PT_BISHOP });
-				out.push_back({ from, i, PT_ROOK });
-				out.push_back({ from, i, PT_QUEEN });
+				out.push_back({ from, i, PT_PAWN, PT_KNIGHT });
+				out.push_back({ from, i, PT_PAWN, PT_BISHOP });
+				out.push_back({ from, i, PT_PAWN, PT_ROOK });
+				out.push_back({ from, i, PT_PAWN, PT_QUEEN });
 				return;
 			}
 		}
 
-		out.push_back({ from, i, piece });
-		});
+		out.push_back({ from, i, PIECE_TYPE, PIECE_TYPE });
+	});
 }
 
 template <uint8_t TEAM, bool EN_PASSANT_AVAILABLE>
@@ -75,21 +75,13 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 	if (checkersAmount == 1)
 		checkBlockPathMask = LookupGen::GetPartialLineMask(etd.firstCheckingPiecePos, td.kingPos) | etd.checkers;
 
-	BitBoard piecesToItr = teamOccupy;
-	if (multipleCheckers)
-		piecesToItr = td.kingPosMask;
+	if (!multipleCheckers) {
 
-	piecesToItr.Iterate(
-		[&](uint64_t _i) {
-			Pos i = _i;
+		td.pieceSets[PT_PAWN] &= td.occupy;
+		td.pieceSets[PT_PAWN].Iterate(
+			[&](uint64_t _i) {
+				Pos i = _i;
 
-			BitBoard moves;
-
-			uint8_t piece = board.pieceTypes[i];
-
-			switch (piece) {
-			case PT_PAWN:
-			{
 				// Removes the forward move if the square in front is occupied
 				BitBoard forwardMove = LookupGen::GetPawnMoves(i, TEAM) & ~combinedOccupy;
 
@@ -128,8 +120,7 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 										Pos pos = Pos(x, moveFromY);
 										if (combinedOccupy[pos]) {
 											if (etd.occupy[pos]) {
-												uint8_t enemyPieceType = board.pieceTypes[pos];
-												wouldRevealKingAttack = (enemyPieceType == PT_ROOK || enemyPieceType == PT_QUEEN);
+												wouldRevealKingAttack = etd.pieceSets[PT_ROOK][pos] || etd.pieceSets[PT_QUEEN][pos];
 											}
 
 											break;
@@ -151,7 +142,7 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 					}
 				}
 
-				moves = (forwardMove | attacks) & checkBlockPathMask;
+				BitBoard moves = (forwardMove | attacks) & checkBlockPathMask;
 
 				if constexpr (EN_PASSANT_AVAILABLE) {
 					// FIX FOR SPECIAL CASE: Allow en passant to capture a checking pawn
@@ -159,72 +150,90 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 						moves |= attacks & board.enPassantToMask;
 					}
 				}
-			}
-			break;
-			case PT_KNIGHT:
-			{
-				moves = LookupGen::GetKnightMoves(i) & ~teamOccupy & checkBlockPathMask;
-			}
-			break;
-			case PT_ROOK:
-			{
-				BitBoard baseMoves, occludedMoves;
-				LookupGen::GetRookMoves(i, combinedOccupy, baseMoves, occludedMoves);
-				moves = occludedMoves & ~teamOccupy & checkBlockPathMask;
-			}
-			break;
-			case PT_BISHOP:
-			{
 
-				BitBoard baseMoves, occludedMoves;
-				LookupGen::GetBishopMoves(i, combinedOccupy, baseMoves, occludedMoves);
-				moves = occludedMoves & ~teamOccupy & checkBlockPathMask;
-			}
-			break;
-			case PT_QUEEN:
-			{
-				BitBoard baseMoves, occludedMoves;
-				LookupGen::GetQueenMoves(i, combinedOccupy, baseMoves, occludedMoves);
-				moves = occludedMoves & ~teamOccupy & checkBlockPathMask;
-			}
-			break;
+				if (td.pinnedPieces[i])
+					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
-			default:
-			{ // King
-				moves = LookupGen::GetKingMoves(i) & ~teamOccupy & ~etd.attack;
+				AddMovesFromBB<PT_PAWN>(i, moves, movesOut);
+			}
+		);
 
-				// Castling
-				if (checkersAmount == 0) {
-					for (int i = 0; i < 2; i++) {
-						bool canCastle = i ? td.canCastle_K : td.canCastle_Q;
-						if (canCastle) {
-							BitBoard castleEmptyMask = CASTLE_EMPTY_MASKS[TEAM][i];
-							if ((combinedOccupy & castleEmptyMask) == 0) {
-								BitBoard castleSafetyMask = CASTLE_SAFETY_MASKS[TEAM][i];
-								if ((castleSafetyMask & etd.attack) == 0) {
-									BoardState::Move castleMove;
-									castleMove.from = td.kingPos;
-									castleMove.to = castleMove.from + (i ? 2 : -2);
-									castleMove.resultPiece = PT_KING;
-									movesOut.push_back(castleMove);
-								}
-							}
+		td.pieceSets[PT_ROOK] &= td.occupy;
+		td.pieceSets[PT_ROOK].Iterate(
+			[&](uint64_t i) {
+				BitBoard baseMoves, moves;
+				LookupGen::GetRookMoves(i, combinedOccupy, baseMoves, moves);
+				moves = moves & ~teamOccupy & checkBlockPathMask;
+				if (td.pinnedPieces[i])
+					moves &= LookupGen::GetLineMask(i, td.kingPos);
+
+				AddMovesFromBB<PT_ROOK>(i, moves, movesOut);
+			}
+		);
+
+		td.pieceSets[PT_KNIGHT] &= td.occupy;
+		td.pieceSets[PT_KNIGHT].Iterate(
+			[&](uint64_t i) {
+				BitBoard moves = LookupGen::GetKnightMoves(i) & ~teamOccupy & checkBlockPathMask;
+				if (td.pinnedPieces[i])
+					moves &= LookupGen::GetLineMask(i, td.kingPos);
+
+				AddMovesFromBB<PT_KNIGHT>(i, moves, movesOut);
+			}
+		);
+
+		td.pieceSets[PT_BISHOP] &= td.occupy;
+		td.pieceSets[PT_BISHOP].Iterate(
+			[&](uint64_t i) {
+				BitBoard baseMoves, moves;
+				LookupGen::GetBishopMoves(i, combinedOccupy, baseMoves, moves);
+				moves = moves & ~teamOccupy & checkBlockPathMask;
+				if (td.pinnedPieces[i])
+					moves &= LookupGen::GetLineMask(i, td.kingPos);
+
+				AddMovesFromBB<PT_BISHOP>(i, moves, movesOut);
+			}
+		);
+
+		td.pieceSets[PT_QUEEN] &= td.occupy;
+		td.pieceSets[PT_QUEEN].Iterate(
+			[&](uint64_t i) {
+				BitBoard baseMoves, moves;
+				LookupGen::GetQueenMoves(i, combinedOccupy, baseMoves, moves);
+				moves = moves & ~teamOccupy & checkBlockPathMask;
+				if (td.pinnedPieces[i])
+					moves &= LookupGen::GetLineMask(i, td.kingPos);
+
+				AddMovesFromBB<PT_QUEEN>(i, moves, movesOut);
+			}
+		);
+	}
+
+	{ // King
+		BitBoard moves = LookupGen::GetKingMoves(td.kingPos) & ~teamOccupy & ~etd.attack;
+
+		// Castling
+		if (checkersAmount == 0) {
+			for (int i = 0; i < 2; i++) {
+				bool canCastle = i ? td.canCastle_K : td.canCastle_Q;
+				if (canCastle) {
+					BitBoard castleEmptyMask = CASTLE_EMPTY_MASKS[TEAM][i];
+					if ((combinedOccupy & castleEmptyMask) == 0) {
+						BitBoard castleSafetyMask = CASTLE_SAFETY_MASKS[TEAM][i];
+						if ((castleSafetyMask & etd.attack) == 0) {
+							BoardState::Move castleMove;
+							castleMove.from = td.kingPos;
+							castleMove.to = castleMove.from + (i ? 2 : -2);
+							castleMove.resultPiece = PT_KING;
+							movesOut.push_back(castleMove);
 						}
 					}
 				}
 			}
-			}
-
-			if (td.pinnedPieces[i])
-				moves &= LookupGen::GetLineMask(i, td.kingPos);
-
-			if (piece == PT_PAWN) {
-				AddMovesFromBB<true>(i, moves, piece, movesOut);
-			} else {
-				AddMovesFromBB<false>(i, moves, piece, movesOut);
-			}
 		}
-	);
+
+		AddMovesFromBB<PT_KING>(td.kingPos, moves, movesOut);
+	}
 }
 
 void MoveGen::GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
