@@ -56,8 +56,8 @@ FINLINE void AddMovesFromBB(Pos from, BitBoard toBB, vector<BoardState::Move>& o
 	});
 }
 
-template <uint8_t TEAM, bool EN_PASSANT_AVAILABLE>
-FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
+template <uint8_t TEAM, bool EN_PASSANT_AVAILABLE, bool ONLY_KING_MOVES>
+FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut, uint64_t checkersAmount) {
 	auto& td = board.teamData[TEAM];
 	auto& etd = board.teamData[!TEAM];
 
@@ -65,20 +65,19 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 	BitBoard enemyOccupy = etd.occupy;
 	BitBoard combinedOccupy = teamOccupy | enemyOccupy;
 
-	uint8_t teamDir = (TEAM == TEAM_WHITE) ? 1 : -1;
-	uint8_t pawnRowY = (TEAM == TEAM_WHITE) ? 1 : 6;
-
-	uint8_t checkersAmount = etd.checkers.BitCount();
-	bool multipleCheckers = checkersAmount > 1;
-
 	BitBoard checkBlockPathMask = BitBoard::Filled();
 	if (checkersAmount == 1)
 		checkBlockPathMask = LookupGen::GetPartialLineMask(etd.firstCheckingPiecePos, td.kingPos) | etd.checkers;
 
-	if (!multipleCheckers) {
+	if constexpr (!ONLY_KING_MOVES) {
 
-		td.pieceSets[PT_PAWN] &= td.occupy;
-		td.pieceSets[PT_PAWN].Iterate(
+		uint8_t teamDir = (TEAM == TEAM_WHITE) ? 1 : -1;
+		uint8_t pawnRowY = (TEAM == TEAM_WHITE) ? 1 : 6;
+
+		BitBoard pieces;
+		
+		pieces = td.pieceSets[PT_PAWN] & td.occupy;
+		pieces.Iterate(
 			[&](uint64_t _i) {
 				Pos i = _i;
 
@@ -158,8 +157,8 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 			}
 		);
 
-		td.pieceSets[PT_ROOK] &= td.occupy;
-		td.pieceSets[PT_ROOK].Iterate(
+		pieces = td.pieceSets[PT_ROOK] & td.occupy;
+		pieces.Iterate(
 			[&](uint64_t i) {
 				BitBoard baseMoves, moves;
 				LookupGen::GetRookMoves(i, combinedOccupy, baseMoves, moves);
@@ -171,8 +170,8 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 			}
 		);
 
-		td.pieceSets[PT_KNIGHT] &= td.occupy;
-		td.pieceSets[PT_KNIGHT].Iterate(
+		pieces = td.pieceSets[PT_KNIGHT] & td.occupy;
+		pieces.Iterate(
 			[&](uint64_t i) {
 				BitBoard moves = LookupGen::GetKnightMoves(i) & ~teamOccupy & checkBlockPathMask;
 				if (td.pinnedPieces[i])
@@ -182,8 +181,8 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 			}
 		);
 
-		td.pieceSets[PT_BISHOP] &= td.occupy;
-		td.pieceSets[PT_BISHOP].Iterate(
+		pieces = td.pieceSets[PT_BISHOP] & td.occupy;
+		pieces.Iterate(
 			[&](uint64_t i) {
 				BitBoard baseMoves, moves;
 				LookupGen::GetBishopMoves(i, combinedOccupy, baseMoves, moves);
@@ -195,8 +194,8 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 			}
 		);
 
-		td.pieceSets[PT_QUEEN] &= td.occupy;
-		td.pieceSets[PT_QUEEN].Iterate(
+		pieces = td.pieceSets[PT_QUEEN] & td.occupy;
+		pieces.Iterate(
 			[&](uint64_t i) {
 				BitBoard baseMoves, moves;
 				LookupGen::GetQueenMoves(i, combinedOccupy, baseMoves, moves);
@@ -237,17 +236,35 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 }
 
 void MoveGen::GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
+	int checkersAmount = board.teamData[!board.turnTeam].checkers.BitCount();;
+	bool onlyKingMoves = checkersAmount > 1;
 	if (board.enPassantToMask) {
 		if (board.turnTeam == TEAM_WHITE) {
-			_GetMoves<TEAM_WHITE, true>(board, movesOut);
+			if (onlyKingMoves) {
+				_GetMoves<TEAM_WHITE, 1, 1>(board, movesOut, checkersAmount);
+			} else {
+				_GetMoves<TEAM_WHITE, 1, 0>(board, movesOut, checkersAmount);
+			}
 		} else {
-			_GetMoves<TEAM_BLACK, true>(board, movesOut);
+			if (onlyKingMoves) {
+				_GetMoves<TEAM_BLACK, 1, 1>(board, movesOut, checkersAmount);
+			} else {
+				_GetMoves<TEAM_BLACK, 1, 0>(board, movesOut, checkersAmount);
+			}
 		}
 	} else {
 		if (board.turnTeam == TEAM_WHITE) {
-			_GetMoves<TEAM_WHITE, false>(board, movesOut);
+			if (onlyKingMoves) {
+				_GetMoves<TEAM_WHITE, 0, 1>(board, movesOut, checkersAmount);
+			} else {
+				_GetMoves<TEAM_WHITE, 0, 0>(board, movesOut, checkersAmount);
+			}
 		} else {
-			_GetMoves<TEAM_BLACK, false>(board, movesOut);
+			if (onlyKingMoves) {
+				_GetMoves<TEAM_BLACK, 0, 1>(board, movesOut, checkersAmount);
+			} else {
+				_GetMoves<TEAM_BLACK, 0, 0>(board, movesOut, checkersAmount);
+			}
 		}
 	}
 }
