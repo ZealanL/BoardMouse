@@ -1,23 +1,24 @@
 #include "BoardState.h"
 #include "../LookupGen/LookupGen.h"
 
-void BoardState::UpdateAttacksAndPins(uint8_t team
+template <uint8_t TEAM>
+FINLINE void _UpdateAttacksAndPins(BoardState& board
 #ifdef USE_PARTIAL_UPDATES
 	, BitBoard updateMask
 #endif
-	) {
+) {
 
 #ifdef USE_PARTIAL_UPDATES
 	BitBoard invUpdateMask = ~updateMask;
 #endif
 
-	auto& td = teamData[team];
-	auto& etd = teamData[!team];
+	auto& td = board.teamData[TEAM];
+	auto& etd = board.teamData[!TEAM];
 	BitBoard combinedOccupy = td.occupy | etd.occupy;
 
 	// Clear attacks/pins/checking pieces
 #ifdef USE_PARTIAL_UPDATES
-	td.attack &= invUpdateMask; 
+	td.attack &= invUpdateMask;
 	etd.pinnedPieces &= invUpdateMask;
 	td.checkers &= invUpdateMask;
 #else
@@ -39,14 +40,14 @@ void BoardState::UpdateAttacksAndPins(uint8_t team
 #endif
 	occupyUpdate.Iterate(
 		[&](uint64_t i) {
-			uint8_t pieceType = pieceTypes[i];
+			uint8_t pieceType = board.pieceTypes[i];
 
 			BitBoard moves;
 
 			switch (pieceType) {
 			case PT_PAWN:
 			{
-				moves = LookupGen::GetPawnAttacks(i, team);
+				moves = LookupGen::GetPawnAttacks(i, TEAM);
 			}
 			break;
 			case PT_KNIGHT:
@@ -90,11 +91,31 @@ void BoardState::UpdateAttacksAndPins(uint8_t team
 			if (moves & etd.kingPosMask) {
 				if (!td.checkers)
 					td.firstCheckingPiecePos = i;
-				
+
 				td.checkers.Set(i, true);
 			}
 		}
 	);
+}
+
+void BoardState::UpdateAttacksAndPins(uint8_t team
+#ifdef USE_PARTIAL_UPDATES
+	, BitBoard updateMask
+#endif
+) {
+	if (team == TEAM_WHITE) {
+		_UpdateAttacksAndPins<TEAM_WHITE>(*this
+#ifdef USE_PARTIAL_UPDATES
+			, updateMask
+#endif
+		);
+	} else {
+		_UpdateAttacksAndPins<TEAM_BLACK>(*this
+#ifdef USE_PARTIAL_UPDATES
+			, updateMask
+#endif
+		);
+	}
 }
 
 void BoardState::ExecuteMove(Move move) {
@@ -186,7 +207,7 @@ void BoardState::ExecuteMove(Move move) {
 			ANI('A8'), ANI('H8')
 		}
 	};
-	
+
 #ifdef UPDATE_VALUES
 	{ // Update piece values
 		if (etd.occupy[move.to])
@@ -199,7 +220,7 @@ void BoardState::ExecuteMove(Move move) {
 	}
 #endif
 
-	constexpr uint64_t 
+	constexpr uint64_t
 		CASTLING_ALL_ROOK_LOCS = ANI_BM('A1') | ANI_BM('H1') | ANI_BM('A8') | ANI_BM('H8'),
 		CASTLING_ALL_ROOK_LOCS_INV = ~CASTLING_ALL_ROOK_LOCS;
 
@@ -283,7 +304,7 @@ std::ostream& operator <<(std::ostream& stream, const BoardState& boardState) {
 					char pieceChar = PT_CHARS[boardState.pieceTypes[pos]];
 					if (squareTeam == TEAM_WHITE)
 						pieceChar = toupper(pieceChar);
-					
+
 					stream << pieceChar;
 				} else {
 					stream << '.';
