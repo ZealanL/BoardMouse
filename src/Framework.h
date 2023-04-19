@@ -13,7 +13,6 @@
 #include <fstream>
 #include <functional>
 #include <immintrin.h>
-#include <x86intrin.h>
 #include <iomanip>
 #include <iostream>
 #include <list>
