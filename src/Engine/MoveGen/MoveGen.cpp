@@ -35,8 +35,8 @@ constexpr uint64_t CASTLE_SAFETY_MASKS[TEAM_AMOUNT][CASTLE_SIDE_AMOUNT] = {
 	}
 };
 
-template <uint8_t PIECE_TYPE>
-FINLINE void AddMovesFromBB(Pos from, BitBoard toBB, vector<BoardState::Move>& out) {
+template <uint8_t PIECE_TYPE, typename CALLBACK>
+FINLINE void AddMovesFromBB(Pos from, BitBoard toBB, CALLBACK callback) {
 	toBB.Iterate([&](Pos i) {
 
 		// Promotion check
@@ -44,20 +44,26 @@ FINLINE void AddMovesFromBB(Pos from, BitBoard toBB, vector<BoardState::Move>& o
 			uint8_t y = i.Y();
 			if (y == 0 || y == (BD_SIZE - 1)) {
 				// Promotion
-				out.push_back({ from, i, PT_PAWN, PT_KNIGHT });
-				out.push_back({ from, i, PT_PAWN, PT_BISHOP });
-				out.push_back({ from, i, PT_PAWN, PT_ROOK });
-				out.push_back({ from, i, PT_PAWN, PT_QUEEN });
+				BoardState::Move
+					pKnight = { from, i, PT_PAWN, PT_KNIGHT },
+					pBishop = { from, i, PT_PAWN, PT_BISHOP },
+					pRook = { from, i, PT_PAWN, PT_ROOK },
+					pQueen = { from, i, PT_PAWN, PT_QUEEN };
+				callback(pKnight);
+				callback(pBishop);
+				callback(pRook);
+				callback(pQueen);
 				return;
 			}
 		}
 
-		out.push_back({ from, i, PIECE_TYPE, PIECE_TYPE });
+		BoardState::Move move = { from, i, PIECE_TYPE, PIECE_TYPE };
+		callback(move);
 	});
 }
 
-template <uint8_t TEAM, bool EN_PASSANT_AVAILABLE, bool ONLY_KING_MOVES>
-FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut, uint64_t checkersAmount) {
+template <uint8_t TEAM, bool EN_PASSANT_AVAILABLE, bool ONLY_KING_MOVES, typename CALLBACK>
+FINLINE void _GetMoves(BoardState& board, uint64_t checkersAmount, CALLBACK callback) {
 	auto& td = board.teamData[TEAM];
 	auto& etd = board.teamData[!TEAM];
 
@@ -159,7 +165,7 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut, ui
 				if (pinnedPieces[i])
 					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
-				AddMovesFromBB<PT_PAWN>(i, moves, movesOut);
+				AddMovesFromBB<PT_PAWN>(i, moves, callback);
 			}
 		);
 
@@ -172,7 +178,7 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut, ui
 				if (pinnedPieces[i])
 					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
-				AddMovesFromBB<PT_ROOK>(i, moves, movesOut);
+				AddMovesFromBB<PT_ROOK>(i, moves, callback);
 			}
 		);
 
@@ -183,7 +189,7 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut, ui
 				if (pinnedPieces[i])
 					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
-				AddMovesFromBB<PT_KNIGHT>(i, moves, movesOut);
+				AddMovesFromBB<PT_KNIGHT>(i, moves, callback);
 			}
 		);
 
@@ -196,7 +202,7 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut, ui
 				if (pinnedPieces[i])
 					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
-				AddMovesFromBB<PT_BISHOP>(i, moves, movesOut);
+				AddMovesFromBB<PT_BISHOP>(i, moves, callback);
 			}
 		);
 
@@ -209,7 +215,7 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut, ui
 				if (pinnedPieces[i])
 					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
-				AddMovesFromBB<PT_QUEEN>(i, moves, movesOut);
+				AddMovesFromBB<PT_QUEEN>(i, moves, callback);
 			}
 		);
 	}
@@ -230,47 +236,46 @@ FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut, ui
 							castleMove.from = td.kingPos;
 							castleMove.to = castleMove.from + (i ? 2 : -2);
 							castleMove.resultPiece = PT_KING;
-							movesOut.push_back(castleMove);
+							callback(castleMove);
 						}
 					}
 				}
 			}
 		}
 
-		AddMovesFromBB<PT_KING>(td.kingPos, moves, movesOut);
+		AddMovesFromBB<PT_KING>(td.kingPos, moves, callback);
+	}
+}
+
+#define KM_G(team, enPassant) \
+	if (onlyKingMoves) \
+		_GetMoves<team, enPassant, 1>(board, checkersAmount, callback); \
+	else \
+		_GetMoves<team, enPassant, 0>(board, checkersAmount, callback);
+
+template <typename T>
+void _GetMovesWrapper(BoardState& board, T callback) {
+	int checkersAmount = board.teamData[!board.turnTeam].checkers.BitCount();
+	bool onlyKingMoves = checkersAmount > 1;
+	if (board.turnTeam == TEAM_WHITE) {
+		if (board.enPassantToMask) {
+			KM_G(TEAM_WHITE, true);
+		} else {
+			KM_G(TEAM_WHITE, false);
+		}
+	} else {
+		if (board.enPassantToMask) {
+			KM_G(TEAM_BLACK, true);
+		} else {
+			KM_G(TEAM_BLACK, false);
+		}
 	}
 }
 
 void MoveGen::GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
-	int checkersAmount = board.teamData[!board.turnTeam].checkers.BitCount();;
-	bool onlyKingMoves = checkersAmount > 1;
-	if (board.enPassantToMask) {
-		if (board.turnTeam == TEAM_WHITE) {
-			if (onlyKingMoves) {
-				_GetMoves<TEAM_WHITE, 1, 1>(board, movesOut, checkersAmount);
-			} else {
-				_GetMoves<TEAM_WHITE, 1, 0>(board, movesOut, checkersAmount);
-			}
-		} else {
-			if (onlyKingMoves) {
-				_GetMoves<TEAM_BLACK, 1, 1>(board, movesOut, checkersAmount);
-			} else {
-				_GetMoves<TEAM_BLACK, 1, 0>(board, movesOut, checkersAmount);
-			}
-		}
-	} else {
-		if (board.turnTeam == TEAM_WHITE) {
-			if (onlyKingMoves) {
-				_GetMoves<TEAM_WHITE, 0, 1>(board, movesOut, checkersAmount);
-			} else {
-				_GetMoves<TEAM_WHITE, 0, 0>(board, movesOut, checkersAmount);
-			}
-		} else {
-			if (onlyKingMoves) {
-				_GetMoves<TEAM_BLACK, 0, 1>(board, movesOut, checkersAmount);
-			} else {
-				_GetMoves<TEAM_BLACK, 0, 0>(board, movesOut, checkersAmount);
-			}
-		}
-	}
+	_GetMovesWrapper(board, [&](BoardState::Move& move) { movesOut.push_back(move); });
+}
+
+void MoveGen::GetMoves(BoardState& board, MoveCallbackFn callback) {
+	_GetMovesWrapper(board, callback);
 }
