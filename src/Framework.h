@@ -80,7 +80,7 @@ typedef uint8_t byte;
 #define SASSERT static_assert
 #pragma endregion
 
-#define FINLINE __forceinline
+#define FINLINE inline
 
 // Make sure we are 64-bit
 SASSERT(sizeof(void*) == 8, "BoardMouse can only run as a 64-bit program");
