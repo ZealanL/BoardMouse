@@ -1,5 +1,7 @@
 #include "LookupGen.h"
 
+#include "../PieceValue/PieceValue.h"
+
 // Base moves for each piece
 // Memory size: Negligible
 static BitBoard
@@ -50,6 +52,10 @@ static BitBoard updateMasks[BD_SQUARE_AMOUNT];
 // Mask of the entire rank
 // Memory size: Negligible
 static BitBoard rankMasks[BD_SQUARE_AMOUNT];
+
+// Values for each piece on each square
+// Memory size: Negligible
+static float pieceValues[TEAM_AMOUNT][PT_AMOUNT][BD_SQUARE_AMOUNT];
 
 void GenerateNonSlidingPieceMoves(bool isKing) {
 	pair<int, int>
@@ -256,6 +262,20 @@ void GenerateRankMasks() {
 	}
 }
 
+void GeneratePieceValues() {
+	memset(pieceValues, 0, sizeof(pieceValues));
+
+	for (uint8_t team = 0; team < TEAM_AMOUNT; team++) {
+		for (uint8_t pieceType = 0; pieceType < PT_AMOUNT; pieceType++) {
+			for (Pos pos = 0; pos < BD_SQUARE_AMOUNT; pos++) {
+				// TODO: Make extra dimension for endgames
+				float val = PieceValue::CalcPieceValue(pieceType, team, pos, false);
+				pieceValues[team][pieceType][pos] = val;
+			}
+		}
+	}
+}
+
 void LookupGen::InitOnce() {
 	LOG("Initializing lookup data...");
 	{ // Only run once
@@ -286,6 +306,9 @@ void LookupGen::InitOnce() {
 
 	DLOG(" > Generating rank masks...");
 	GenerateRankMasks();
+
+	DLOG(" > Generating piece values...");
+	GeneratePieceValues();
 
 	DLOG(" > Done!");
 }
@@ -369,4 +392,8 @@ BitBoard LookupGen::GetUpdateMask(Pos pos) {
 BitBoard LookupGen::GetRankMask(Pos pos) {
 	// TODO: Non-lookup is maybe faster?
 	return rankMasks[pos];
+}
+
+float LookupGen::GetPieceValue(uint8_t pieceType, Pos pos, uint8_t team) {
+	return pieceValues[team][pieceType][pos];
 }

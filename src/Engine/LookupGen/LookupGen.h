@@ -30,4 +30,6 @@ namespace LookupGen {
 	BitBoard GetBetweenMask(Pos from, Pos to);
 	BitBoard GetUpdateMask(Pos pos);
 	BitBoard GetRankMask(Pos pos);
+
+	float GetPieceValue(uint8_t pieceType, Pos pos, uint8_t team);
 }

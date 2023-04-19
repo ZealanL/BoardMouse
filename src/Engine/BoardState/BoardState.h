@@ -6,6 +6,7 @@
 
 // TODO: Creates a bug somehow
 //#define USE_PARTIAL_UPDATES
+//#define UPDATE_VALUES
 
 // Stores all info for the state of a chess game
 struct BoardState {
@@ -48,6 +49,8 @@ struct BoardState {
 
 		bool canCastle_Q; // Can castle queen-side (right/+x)
 		bool canCastle_K; // Can castle king-side (left/-x)
+
+		float totalValue; // Value of all of our pieces
 	};
 	TeamData teamData[TEAM_AMOUNT];
 	
@@ -70,6 +73,12 @@ struct BoardState {
 	// Position of the pawn that can be captured by en passant
 	// NOTE: Only valid if enPassantToMask != 0
 	Pos enPassantPawnPos;
+
+	// Values of each piece
+	float pieceValues[BD_SQUARE_AMOUNT];
+
+	// Updates all persistent values, call this when you modify the board beyond ExecuteMove()
+	void ForceUpdateAll();
 
 	// Run a move on the board, update accordingly
 	void ExecuteMove(Move move);

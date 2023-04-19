@@ -9,11 +9,11 @@
 #include <bitset>
 #include <cassert>
 #include <chrono>
-#include <chrono>
 #include <deque>
 #include <fstream>
 #include <functional>
 #include <immintrin.h>
+#include <x86intrin.h>
 #include <iomanip>
 #include <iostream>
 #include <list>
@@ -48,7 +48,7 @@ typedef uint8_t byte;
 #pragma endregion
 
 // Current millisecond time
-#define CUR_MS() (std::chrono::duration_cast<std::chrono::miliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count())
+#define CUR_MS() (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count())
 
 #pragma region Logic Macros
 #define MAX(a, b) ((a > b) ? a : b)
@@ -108,16 +108,37 @@ inline vector<string> __SPLIT_STR(const string& str, const string& delim) {
 
 #define SPLIT_STR __SPLIT_STR
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 inline uint32_t __INTRIN_CTZ(uint64_t val) {
 	unsigned long result;
 	_BitScanForward64(&result, val);
 	return result;
 }
+inline uint64_t __INTRIN_PEXT(uint64_t data, uint64_t mask) {
+	return _pext_u64(data, mask);
+}
+inline uint64_t __INTRIN_PDEP(uint64_t data, uint64_t mask) {
+	return _pdep_u64(data, mask);
+}
 #else
 inline uint32_t __INTRIN_CTZ(uint64_t val) {
 	return __builtin_ctzll(val);
 }
+
+#ifdef __clang__
+#pragma clang attribute push (__attribute__((target("bmi2"))), apply_to=function)
+#endif
+inline uint64_t __INTRIN_PEXT(uint64_t data, uint64_t mask) {
+	return __builtin_ia32_pext_di(data, mask);
+}
+inline uint64_t __INTRIN_PDEP(uint64_t data, uint64_t mask) {
+	return __builtin_ia32_pdep_di(data, mask);
+}
+#ifdef __clang__
+#pragma clang attribute pop
+#endif
 #endif
 
 #define INTRIN_CTZ __INTRIN_CTZ
+#define INTRIN_PEXT __INTRIN_PEXT
+#define INTRIN_PDEP __INTRIN_PDEP

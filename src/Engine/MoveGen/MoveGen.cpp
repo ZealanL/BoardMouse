@@ -56,20 +56,17 @@ void AddMovesFromBB(Pos from, BitBoard toBB, uint8_t piece, vector<BoardState::M
 		});
 }
 
-template <bool EN_PASSANT_AVAILABLE>
+template <uint8_t TEAM, bool EN_PASSANT_AVAILABLE>
 void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
-
-	uint8_t team = board.turnTeam;
-
-	auto& td = board.teamData[team];
-	auto& etd = board.teamData[!team];
+	auto& td = board.teamData[TEAM];
+	auto& etd = board.teamData[!TEAM];
 
 	BitBoard teamOccupy = td.occupy;
 	BitBoard enemyOccupy = etd.occupy;
 	BitBoard combinedOccupy = teamOccupy | enemyOccupy;
 
-	uint8_t teamDir = (team == TEAM_WHITE) ? 1 : -1;
-	uint8_t pawnRowY = (team == TEAM_WHITE) ? 1 : 6;
+	uint8_t teamDir = (TEAM == TEAM_WHITE) ? 1 : -1;
+	uint8_t pawnRowY = (TEAM == TEAM_WHITE) ? 1 : 6;
 
 	uint8_t checkersAmount = etd.checkers.BitCount();
 	bool multipleCheckers = checkersAmount > 1;
@@ -78,7 +75,11 @@ void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 	if (checkersAmount == 1)
 		checkBlockPathMask = LookupGen::GetPartialLineMask(etd.firstCheckingPiecePos, td.kingPos) | etd.checkers;
 
-	teamOccupy.Iterate(
+	BitBoard piecesToItr = teamOccupy;
+	if (multipleCheckers)
+		piecesToItr = td.kingPosMask;
+
+	piecesToItr.Iterate(
 		[&](uint64_t _i) {
 			Pos i = _i;
 
@@ -86,24 +87,21 @@ void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 
 			uint8_t piece = board.pieceTypes[i];
 
-			if (multipleCheckers && piece != PT_KING)
-				return;
-
 			switch (piece) {
 			case PT_PAWN:
 			{
 				// Removes the forward move if the square in front is occupied
-				BitBoard forwardMove = LookupGen::GetPawnMoves(i, team) & ~combinedOccupy;
+				BitBoard forwardMove = LookupGen::GetPawnMoves(i, TEAM) & ~combinedOccupy;
 
 				int moveFromY = i.Y();
 
 				// Add double-forward move if we are in the pawn row and nothing is in the way
 				bool inPawnRow = (moveFromY == pawnRowY);
 				if (inPawnRow) // Compiler should make this branchless
-					forwardMove |= ((team == TEAM_WHITE ? (forwardMove << BD_SIZE) : (forwardMove >> BD_SIZE)) & ~combinedOccupy);
+					forwardMove |= ((TEAM == TEAM_WHITE ? (forwardMove << BD_SIZE) : (forwardMove >> BD_SIZE)) & ~combinedOccupy);
 
 				// Only adds attacks that are to squares with an enemy piece
-				BitBoard baseAttacks = LookupGen::GetPawnAttacks(i, team);
+				BitBoard baseAttacks = LookupGen::GetPawnAttacks(i, TEAM);
 				BitBoard attacks = baseAttacks & etd.occupy;
 
 				if constexpr (EN_PASSANT_AVAILABLE) {
@@ -200,9 +198,9 @@ void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 					for (int i = 0; i < 2; i++) {
 						bool canCastle = i ? td.canCastle_K : td.canCastle_Q;
 						if (canCastle) {
-							BitBoard castleEmptyMask = CASTLE_EMPTY_MASKS[team][i];
+							BitBoard castleEmptyMask = CASTLE_EMPTY_MASKS[TEAM][i];
 							if ((combinedOccupy & castleEmptyMask) == 0) {
-								BitBoard castleSafetyMask = CASTLE_SAFETY_MASKS[team][i];
+								BitBoard castleSafetyMask = CASTLE_SAFETY_MASKS[TEAM][i];
 								if ((castleSafetyMask & etd.attack) == 0) {
 									BoardState::Move castleMove;
 									castleMove.from = td.kingPos;
@@ -231,8 +229,16 @@ void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 
 void MoveGen::GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 	if (board.enPassantToMask) {
-		_GetMoves<true>(board, movesOut);
+		if (board.turnTeam == TEAM_WHITE) {
+			_GetMoves<TEAM_WHITE, true>(board, movesOut);
+		} else {
+			_GetMoves<TEAM_BLACK, true>(board, movesOut);
+		}
 	} else {
-		_GetMoves<false>(board, movesOut);
+		if (board.turnTeam == TEAM_WHITE) {
+			_GetMoves<TEAM_WHITE, false>(board, movesOut);
+		} else {
+			_GetMoves<TEAM_BLACK, false>(board, movesOut);
+		}
 	}
 }

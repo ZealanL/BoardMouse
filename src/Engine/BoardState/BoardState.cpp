@@ -159,6 +159,15 @@ void BoardState::ExecuteMove(Move move) {
 				pieceTypes[rookToPos] = PT_ROOK;
 				td.occupy &= ~(1ull << rookFromPos);
 				td.occupy |= (1ull << rookToPos);
+
+#ifdef UPDATE_VALUES
+				// Update rook value
+				td.totalValue -= pieceValues[rookFromPos];
+				float newValue = LookupGen::GetPieceValue(PT_ROOK, rookToPos, turnTeam);
+				pieceValues[move.to] = newValue;
+				td.totalValue += newValue;
+#endif
+
 #ifdef USE_PARTIAL_UPDATES
 				updateMask |= LookupGen::GetUpdateMask(rookFromPos);
 				updateMask |= LookupGen::GetUpdateMask(rookToPos);
@@ -177,6 +186,18 @@ void BoardState::ExecuteMove(Move move) {
 			ANI('A8'), ANI('H8')
 		}
 	};
+	
+#ifdef UPDATE_VALUES
+	{ // Update piece values
+		if (etd.occupy[move.to])
+			etd.totalValue -= pieceValues[move.to];
+
+		td.totalValue -= pieceValues[move.from];
+		float newValue = LookupGen::GetPieceValue(move.resultPiece, move.to, turnTeam);
+		pieceValues[move.to] = newValue;
+		td.totalValue += newValue;
+	}
+#endif
 
 	constexpr uint64_t 
 		CASTLING_ALL_ROOK_LOCS = ANI_BM('A1') | ANI_BM('H1') | ANI_BM('A8') | ANI_BM('H8'),
@@ -206,8 +227,31 @@ void BoardState::ExecuteMove(Move move) {
 	UpdateAttacksAndPins(turnTeam, updateMask);
 #else
 	UpdateAttacksAndPins(turnTeam);
-#endif;
+#endif
 	turnTeam = !turnTeam;
+}
+
+void BoardState::ForceUpdateAll() {
+	for (uint8_t team = 0; team < TEAM_AMOUNT; team++) {
+
+		// Update attacks and pins
+		UpdateAttacksAndPins(team);
+
+#ifdef UPDATE_VALUES
+		{ // Update piece values
+			auto& td = teamData[team];
+			td.totalValue = 0;
+
+			td.occupy.Iterate(
+				[&](uint64_t i) {
+					float val = LookupGen::GetPieceValue(pieceTypes[i], i, team);
+					pieceValues[i] = val;
+					td.totalValue += val;
+				}
+			);
+		}
+#endif
+	}
 }
 
 std::ostream& operator <<(std::ostream& stream, const BoardState& boardState) {
