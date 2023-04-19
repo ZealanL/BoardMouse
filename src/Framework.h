@@ -108,34 +108,27 @@ inline vector<string> __SPLIT_STR(const string& str, const string& delim) {
 #define SPLIT_STR __SPLIT_STR
 
 #if defined(_MSC_VER) && !defined(__clang__)
-inline uint32_t __INTRIN_CTZ(uint64_t val) {
+FINLINE uint32_t __INTRIN_CTZ(uint64_t val) {
 	unsigned long result;
 	_BitScanForward64(&result, val);
 	return result;
 }
-inline uint64_t __INTRIN_PEXT(uint64_t data, uint64_t mask) {
+FINLINE uint64_t __INTRIN_PEXT(uint64_t data, uint64_t mask) {
 	return _pext_u64(data, mask);
 }
-inline uint64_t __INTRIN_PDEP(uint64_t data, uint64_t mask) {
+FINLINE uint64_t __INTRIN_PDEP(uint64_t data, uint64_t mask) {
 	return _pdep_u64(data, mask);
 }
 #else
-inline uint32_t __INTRIN_CTZ(uint64_t val) {
+FINLINE uint32_t __INTRIN_CTZ(uint64_t val) {
 	return __builtin_ctzll(val);
 }
-
-#ifdef __clang__
-#pragma clang attribute push (__attribute__((target("bmi2"))), apply_to=function)
-#endif
-inline uint64_t __INTRIN_PEXT(uint64_t data, uint64_t mask) {
+FINLINE uint64_t __INTRIN_PEXT(uint64_t data, uint64_t mask) {
 	return __builtin_ia32_pext_di(data, mask);
 }
-inline uint64_t __INTRIN_PDEP(uint64_t data, uint64_t mask) {
+FINLINE uint64_t __INTRIN_PDEP(uint64_t data, uint64_t mask) {
 	return __builtin_ia32_pdep_di(data, mask);
 }
-#ifdef __clang__
-#pragma clang attribute pop
-#endif
 #endif
 
 #define INTRIN_CTZ __INTRIN_CTZ
