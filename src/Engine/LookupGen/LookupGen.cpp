@@ -230,7 +230,6 @@ void GenerateUpdateMasks() {
 		BitBoard& mask = LookupGen::updateMasks[pos];
 		mask |= LookupGen::rookMoveLookup[pos];
 		mask |= LookupGen::bishopMoveLookup[pos];
-		mask |= LookupGen::knightMoveLookup[pos];
 		mask.Set(pos, true);
 	}
 }
