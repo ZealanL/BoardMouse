@@ -36,7 +36,7 @@ constexpr uint64_t CASTLE_SAFETY_MASKS[TEAM_AMOUNT][CASTLE_SIDE_AMOUNT] = {
 };
 
 template <bool IS_PAWN>
-void AddMovesFromBB(Pos from, BitBoard toBB, uint8_t piece, vector<BoardState::Move>& out) {
+FINLINE void AddMovesFromBB(Pos from, BitBoard toBB, uint8_t piece, vector<BoardState::Move>& out) {
 	toBB.Iterate([&](Pos i) {
 
 		// Promotion check
@@ -57,7 +57,7 @@ void AddMovesFromBB(Pos from, BitBoard toBB, uint8_t piece, vector<BoardState::M
 }
 
 template <uint8_t TEAM, bool EN_PASSANT_AVAILABLE>
-void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
+FINLINE void _GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
 	auto& td = board.teamData[TEAM];
 	auto& etd = board.teamData[!TEAM];
 
