@@ -131,6 +131,11 @@ FINLINE uint64_t __INTRIN_PDEP(uint64_t data, uint64_t mask) {
 }
 #endif
 
+FINLINE uint64_t __INTRIN_BSLR(uint64_t data) {
+	return _blsr_u64(data);
+}
+
 #define INTRIN_CTZ __INTRIN_CTZ
 #define INTRIN_PEXT __INTRIN_PEXT
 #define INTRIN_PDEP __INTRIN_PDEP
+#define INTRIN_BSLR __INTRIN_BSLR
