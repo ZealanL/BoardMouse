@@ -2,60 +2,52 @@
 
 #include "../PieceValue/PieceValue.h"
 
-// Base moves for each piece
-// Memory size: Negligible
-static BitBoard
-	kingMoveLookup[BD_SQUARE_AMOUNT],
-	knightMoveLookup[BD_SQUARE_AMOUNT],
-	rookMoveLookup[BD_SQUARE_AMOUNT],
-	bishopMoveLookup[BD_SQUARE_AMOUNT];
+ BitBoard
+	 LookupGen::kingMoveLookup[BD_SQUARE_AMOUNT] = {},
+	 LookupGen::knightMoveLookup[BD_SQUARE_AMOUNT] = {},
+LookupGen::rookMoveLookup[BD_SQUARE_AMOUNT] = {},
+LookupGen::bishopMoveLookup[BD_SQUARE_AMOUNT] = {};
 
 // Lookup for the move or attack possibilities for any pawn in any position, for either team
 // NOTE: Ignores occlusion and attack availability, that is done elsewhere
 // Memory sizes: Negligible
-static BitBoard 
-	pawnMoveLookup[TEAM_AMOUNT][BD_SQUARE_AMOUNT], 
-	pawnAttackLookup[TEAM_AMOUNT][BD_SQUARE_AMOUNT];
-
-// The number of entries in a slider's occlusion lookup array
-// Since the bit where the slider is present is ignored, there are 7 possible blocking spaces
-// NOTE: To save memory, I could not check any bits along the edge (making this 64^2 instead of 128^2), 
-//	however this would require another mask operation for every lookup
-#define SLIDER_OCCLUSION_LOOKUP_ENTRY_COUNT (128*128)
+BitBoard
+LookupGen::pawnMoveLookup[TEAM_AMOUNT][BD_SQUARE_AMOUNT] = {},
+LookupGen::pawnAttackLookup[TEAM_AMOUNT][BD_SQUARE_AMOUNT] = {};
 
 // Memory size: ~16.8MB for both
 // NOTE: If the edgemask is used (as discussed above), memory size would be only ~4.2MB for both
 //	However, I'd prefer to use an extra 12 MB of memory to remove a lookup operation!
-static BitBoard 
-	rookOcclusionLookup[BD_SQUARE_AMOUNT][SLIDER_OCCLUSION_LOOKUP_ENTRY_COUNT],
-	bishopOcclusionLookup[BD_SQUARE_AMOUNT][SLIDER_OCCLUSION_LOOKUP_ENTRY_COUNT];
+BitBoard
+LookupGen::rookOcclusionLookup[BD_SQUARE_AMOUNT][SLIDER_OCCLUSION_LOOKUP_ENTRY_COUNT] = {},
+LookupGen::bishopOcclusionLookup[BD_SQUARE_AMOUNT][SLIDER_OCCLUSION_LOOKUP_ENTRY_COUNT] = {};
 
 // Masks of the path between two squares (not including those squares)
 // Only works for paths that are diagonal or straight
 // Memory size: Negligible
-static BitBoard betweenMasks[BD_SQUARE_AMOUNT][BD_SQUARE_AMOUNT];
+BitBoard LookupGen::betweenMasks[BD_SQUARE_AMOUNT][BD_SQUARE_AMOUNT] = {};
 
 // Masks of the line connecting two squares, from one side of the board to the other
 // Only works for paths that are diagonal or straight
 // Memory size: Negligible
-static BitBoard lineMasks[BD_SQUARE_AMOUNT][BD_SQUARE_AMOUNT];
+BitBoard LookupGen::lineMasks[BD_SQUARE_AMOUNT][BD_SQUARE_AMOUNT] = {};
 
 // Masks of the line connecting two squares, but doesn't extend beyond the two points
 // Only works for paths that are diagonal or straight
 // Memory size: Negligible
-static BitBoard partialLineMasks[BD_SQUARE_AMOUNT][BD_SQUARE_AMOUNT];
+BitBoard LookupGen::partialLineMasks[BD_SQUARE_AMOUNT][BD_SQUARE_AMOUNT] = {};
 
 // Masks of all moves for any piece from the current location (aka queen|knight), including the current location
 // Memory size: Negligible
-static BitBoard updateMasks[BD_SQUARE_AMOUNT];
+BitBoard LookupGen::updateMasks[BD_SQUARE_AMOUNT] = {};
 
 // Mask of the entire rank
 // Memory size: Negligible
-static BitBoard rankMasks[BD_SQUARE_AMOUNT];
+BitBoard LookupGen::rankMasks[BD_SQUARE_AMOUNT] = {};
 
 // Values for each piece on each square
 // Memory size: Negligible
-static float pieceValues[TEAM_AMOUNT][PT_AMOUNT][BD_SQUARE_AMOUNT];
+float LookupGen::pieceValues[TEAM_AMOUNT][PT_AMOUNT][BD_SQUARE_AMOUNT] = {};
 
 void GenerateNonSlidingPieceMoves(bool isKing) {
 	pair<int, int>
@@ -91,7 +83,7 @@ void GenerateNonSlidingPieceMoves(bool isKing) {
 		int x = pos.X();
 		int y = pos.Y();
 
-		BitBoard& mask = (isKing ? kingMoveLookup : knightMoveLookup)[pos];
+		BitBoard& mask = (isKing ? LookupGen::kingMoveLookup : LookupGen::knightMoveLookup)[pos];
 
 		// Try to add any that we can
 		for (int i = 0; i < 8; i++) {
@@ -139,14 +131,14 @@ void GenerateSlidingPieceMoves(bool isBishop) {
 
 	// Make the base masks (no occlusion)
 	for (uint64_t i = 0; i < BD_SQUARE_AMOUNT; i++) {
-		BitBoard& baseMoves = (isBishop ? bishopMoveLookup : rookMoveLookup)[i];
+		BitBoard& baseMoves = (isBishop ? LookupGen::bishopMoveLookup : LookupGen::rookMoveLookup)[i];
 
 		for (int ri = 0; ri < 4; ri++)
 			FillRay(baseMoves, i, offsets[ri], 0);
 
 		// Make the occlusion masks
 		for (uint64_t j = 0; j < SLIDER_OCCLUSION_LOOKUP_ENTRY_COUNT; j++) {
-			BitBoard& occlusionMoves = (isBishop ? bishopOcclusionLookup : rookOcclusionLookup)[i][j];
+			BitBoard& occlusionMoves = (isBishop ? LookupGen::bishopOcclusionLookup : LookupGen::rookOcclusionLookup)[i][j];
 
 			// Using the current entry index, we can map the index bits to the bishop's attack squares to get the occlusion bitboard
 			BitBoard occlusion = BitBoard(j).MapBits(baseMoves);
@@ -169,8 +161,8 @@ void GeneratePawnMovesAndAttacks() {
 			if (nextY < 0 || nextY > BD_MAXI)
 				continue; // Pawn is at the other side of the board
 
-			BitBoard& moveBoard = pawnMoveLookup[i][pos];
-			BitBoard& attackBoard = pawnAttackLookup[i][pos];
+			BitBoard& moveBoard = LookupGen::pawnMoveLookup[i][pos];
+			BitBoard& attackBoard = LookupGen::pawnAttackLookup[i][pos];
 
 			// Walk forward
 			moveBoard.Set(Pos(x, nextY), true);
@@ -187,10 +179,6 @@ void GeneratePawnMovesAndAttacks() {
 }
 
 void GenerateBetweenAndLineMasks() {
-	// Prevent uninitialized memory usage
-	memset(betweenMasks, 0, sizeof(betweenMasks));
-	memset(lineMasks, 0, sizeof(lineMasks));
-
 	for (Pos from = 0; from < BD_SQUARE_AMOUNT; from++) {
 		for (Pos to = 0; to < BD_SQUARE_AMOUNT; to++) {
 			if (from == to)
@@ -230,30 +218,26 @@ void GenerateBetweenAndLineMasks() {
 				// Invalid path, ignore it
 			}
 
-			betweenMasks[from][to] = betweenMask;
-			lineMasks[from][to] = lineMask;
-			partialLineMasks[from][to] = partialLineMask;
+			LookupGen::betweenMasks[from][to] = betweenMask;
+			LookupGen::lineMasks[from][to] = lineMask;
+			LookupGen::partialLineMasks[from][to] = partialLineMask;
 		}
 	}
 }
 
 void GenerateUpdateMasks() {
-	memset(updateMasks, 0, sizeof(updateMasks));
-
 	for (Pos pos = 0; pos < BD_SQUARE_AMOUNT; pos++) {
-		BitBoard& mask = updateMasks[pos];
-		mask |= rookMoveLookup[pos];
-		mask |= bishopMoveLookup[pos];
-		mask |= knightMoveLookup[pos];
+		BitBoard& mask = LookupGen::updateMasks[pos];
+		mask |= LookupGen::rookMoveLookup[pos];
+		mask |= LookupGen::bishopMoveLookup[pos];
+		mask |= LookupGen::knightMoveLookup[pos];
 		mask.Set(pos, true);
 	}
 }
 
 void GenerateRankMasks() {
-	memset(rankMasks, 0, sizeof(updateMasks));
-
 	for (Pos pos = 0; pos < BD_SQUARE_AMOUNT; pos++) {
-		BitBoard& mask = rankMasks[pos];
+		BitBoard& mask = LookupGen::rankMasks[pos];
 
 		for (int x = 0; x < BD_SIZE; x++)
 			mask.Set(Pos(x, pos.Y()), true);
@@ -263,14 +247,12 @@ void GenerateRankMasks() {
 }
 
 void GeneratePieceValues() {
-	memset(pieceValues, 0, sizeof(pieceValues));
-
 	for (uint8_t team = 0; team < TEAM_AMOUNT; team++) {
 		for (uint8_t pieceType = 0; pieceType < PT_AMOUNT; pieceType++) {
 			for (Pos pos = 0; pos < BD_SQUARE_AMOUNT; pos++) {
 				// TODO: Make extra dimension for endgames
 				float val = PieceValue::CalcPieceValue(pieceType, team, pos, false);
-				pieceValues[team][pieceType][pos] = val;
+				LookupGen::pieceValues[team][pieceType][pos] = val;
 			}
 		}
 	}
@@ -311,89 +293,4 @@ void LookupGen::InitOnce() {
 	GeneratePieceValues();
 
 	DLOG(" > Done!");
-}
-
-BitBoard LookupGen::GetRookBaseMoves(Pos rookPos) {
-	return rookMoveLookup[rookPos];
-}
-
-void LookupGen::GetRookMoves(Pos rookPos, BitBoard occupiedMask, BitBoard& outBaseMoves, BitBoard& outOccludedMoves) {
-	BitBoard baseMoves = GetRookBaseMoves(rookPos);
-	outBaseMoves = baseMoves;
-	BitBoard occlusionBits = occupiedMask.ExtractBits(baseMoves);
-	outOccludedMoves = rookOcclusionLookup[rookPos][occlusionBits];
-}
-
-BitBoard LookupGen::GetBishopBaseMoves(Pos rookPos) {
-	return bishopMoveLookup[rookPos];
-}
-
-void LookupGen::GetBishopMoves(Pos bishopPos, BitBoard occupiedMask, BitBoard& outBaseMoves, BitBoard& outOccludedMoves) {
-	BitBoard baseMoves = GetBishopBaseMoves(bishopPos);
-	outBaseMoves = baseMoves;
-	BitBoard occlusionBits = occupiedMask.ExtractBits(baseMoves);
-	outOccludedMoves = bishopOcclusionLookup[bishopPos][occlusionBits];
-}
-
-BitBoard LookupGen::GetQueenBaseMoves(Pos queenPos) {
-	BitBoard
-		baseMoves_R = rookMoveLookup[queenPos],
-		baseMoves_B = bishopMoveLookup[queenPos];
-	return baseMoves_R | baseMoves_B;
-}
-
-void LookupGen::GetQueenMoves(Pos queenPos, BitBoard occupiedMask, BitBoard& outBaseMoves, BitBoard& outOccludedMoves) {
-	// TODO: Maybe use seperate lookup(?)
-
-	BitBoard 
-		baseMoves_R = rookMoveLookup[queenPos],
-		baseMoves_B = bishopMoveLookup[queenPos];
-	outBaseMoves = baseMoves_R | baseMoves_B;
-
-	BitBoard
-		occlusionBits_R = occupiedMask.ExtractBits(baseMoves_R),
-		occlusionBits_B = occupiedMask.ExtractBits(baseMoves_B);
-	outOccludedMoves = 
-		rookOcclusionLookup[queenPos][occlusionBits_R] | bishopOcclusionLookup[queenPos][occlusionBits_B];
-}
-
-BitBoard LookupGen::GetKingMoves(Pos kingPos) {
-	return kingMoveLookup[kingPos];
-}
-
-BitBoard LookupGen::GetKnightMoves(Pos knightPos) {
-	return knightMoveLookup[knightPos];
-}
-
-BitBoard LookupGen::GetPawnMoves(Pos pawnPos, uint8_t team) {
-	return pawnMoveLookup[team][pawnPos];
-}
-
-BitBoard LookupGen::GetPawnAttacks(Pos pawnPos, uint8_t team) {
-	return pawnAttackLookup[team][pawnPos];
-}
-
-BitBoard LookupGen::GetLineMask(Pos from, Pos to) {
-	return lineMasks[from.index][to.index];
-}
-
-BitBoard LookupGen::GetPartialLineMask(Pos from, Pos to) {
-	return partialLineMasks[from.index][to.index];
-}
-
-BitBoard LookupGen::GetBetweenMask(Pos from, Pos to) {
-	return betweenMasks[from.index][to.index];
-}
-
-BitBoard LookupGen::GetUpdateMask(Pos pos) {
-	return updateMasks[pos];
-}
-
-BitBoard LookupGen::GetRankMask(Pos pos) {
-	// TODO: Non-lookup is maybe faster?
-	return rankMasks[pos];
-}
-
-float LookupGen::GetPieceValue(uint8_t pieceType, Pos pos, uint8_t team) {
-	return pieceValues[team][pieceType][pos];
 }
