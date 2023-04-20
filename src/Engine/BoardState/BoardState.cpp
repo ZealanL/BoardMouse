@@ -136,6 +136,14 @@ void BoardState::ExecuteMove(Move move) {
 	}
 #endif
 
+#ifdef UPDATE_HASHES
+	// Remove castling rights from hash
+	hash ^= Zobrist::HashCastleRights(turnTeam, td.canCastle_Q, td.canCastle_K);
+	hash ^= Zobrist::HashCastleRights(!turnTeam, etd.canCastle_Q, etd.canCastle_K);
+#endif
+
+	Pos newEnPassantPos = 0;
+	uint64_t newEnPassantMask = 0;
 
 	// En passant capture
 	if (move.originalPiece == PT_PAWN) {
@@ -143,46 +151,63 @@ void BoardState::ExecuteMove(Move move) {
 			// Remove piece behind our pawn
 			etd.occupy.Set(enPassantPawnPos, 0);
 			etd.pieceSets[PT_PAWN].Set(enPassantPawnPos, 0);
-			enPassantToMask = 0;
+
+#ifdef UPDATE_HASHES
+			// Remove pawn hash
+			hash ^= Zobrist::HashPiece(PT_ROOK, enPassantPawnPos, !turnTeam);
+#endif
+
 		} else if (abs(move.to - move.from) > BD_SIZE + 1) {
 			// Double pawn move, set en passant mask behind us
-			enPassantToMask = (turnTeam == TEAM_WHITE ? toMask >> BD_SIZE : toMask << BD_SIZE);
-			enPassantPawnPos = move.to;
-		} else {
-			enPassantToMask = 0;
+			newEnPassantMask = (turnTeam == TEAM_WHITE ? toMask >> BD_SIZE : toMask << BD_SIZE);
+			newEnPassantPos = move.to;
 		}
-	} else {
-		enPassantToMask = 0;
+	} else if (move.originalPiece == PT_KING) {
+		{ // Update king pos
+			td.kingPos = move.to;
+			td.canCastle_K = td.canCastle_Q = false;
+		}
 
-		if (move.originalPiece == PT_KING) {
-			{ // Update king pos
-				td.kingPos = move.to;
-				td.canCastle_K = td.canCastle_Q = false;
-			}
+		int xDelta = move.to.X() - move.from.X();
+		if (xDelta && ((xDelta & 1) == 0)) {
+			int castleIndex = xDelta > 0;
+			uint8_t castleFromX = (xDelta > 0 ? BD_SIZE - 1 : 0);
 
-			int xDelta = move.to.X() - move.from.X();
-			if (xDelta && ((xDelta & 1) == 0)) {
-				int castleIndex = xDelta > 0;
-				uint8_t castleFromX = (xDelta > 0 ? BD_SIZE - 1 : 0);
+			// We are castling!
+			// Move the rook...
+			Pos rookFromPos = Pos((xDelta > 0 ? BD_SIZE - 1 : 0), move.from.Y());
+			Pos rookToPos = move.from.index + xDelta / 2;
+			BitBoard rookFlipMask = (1ull << rookFromPos) | (1ull << rookToPos);
 
-				// We are castling!
-				// Move the rook...
-				Pos rookFromPos = Pos((xDelta > 0 ? BD_SIZE - 1 : 0), move.from.Y());
-				Pos rookToPos = move.from.index + xDelta / 2;
-				BitBoard rookFlipMask = (1ull << rookFromPos) | (1ull << rookToPos);
-
-				td.pieceSets[PT_ROOK] ^= rookFlipMask;
-				td.occupy ^= rookFlipMask;
+			td.pieceSets[PT_ROOK] ^= rookFlipMask;
+			td.occupy ^= rookFlipMask;
 
 #ifdef UPDATE_VALUES
-				// Update rook value
-				td.totalValue -= pieceValues[rookFromPos];
-				float newValue = LookupGen::GetPieceValue(PT_ROOK, rookToPos, turnTeam);
-				pieceValues[move.to] = newValue;
-				td.totalValue += newValue;
+			// Update rook value
+			td.totalValue -= pieceValues[rookFromPos];
+			float newValue = LookupGen::GetPieceValue(PT_ROOK, rookToPos, turnTeam);
+			pieceValues[move.to] = newValue;
+			td.totalValue += newValue;
 #endif
-			}
+
+#ifdef UPDATE_HASHES
+			// Update rook hash
+			hash ^= Zobrist::HashPiece(PT_ROOK, rookFromPos, turnTeam);
+			hash ^= Zobrist::HashPiece(PT_ROOK, rookToPos, turnTeam);
+#endif
 		}
+	}
+
+	if (newEnPassantMask != enPassantToMask) {
+
+#ifdef UPDATE_HASHES
+		// Update en passant hashes
+		hash ^= Zobrist::HashEnPassant(enPassantToMask != 0, enPassantPawnPos);
+		hash ^= Zobrist::HashEnPassant(newEnPassantMask != 0, newEnPassantPos);
+#endif
+
+		enPassantToMask = newEnPassantMask;
+		enPassantPawnPos = newEnPassantPos;
 	}
 
 	// Order: Queen-side, King-side
@@ -211,12 +236,6 @@ void BoardState::ExecuteMove(Move move) {
 	constexpr uint64_t
 		CASTLING_ALL_ROOK_LOCS = ANI_BM('A1') | ANI_BM('H1') | ANI_BM('A8') | ANI_BM('H8'),
 		CASTLING_ALL_ROOK_LOCS_INV = ~CASTLING_ALL_ROOK_LOCS;
-
-#ifdef UPDATE_HASHES
-	// Remove castling rights from hash
-	hash ^= Zobrist::HashCastleRights(turnTeam, td.canCastle_Q, td.canCastle_K);
-	hash ^= Zobrist::HashCastleRights(!turnTeam, etd.canCastle_Q, etd.canCastle_K);
-#endif
 
 	if (fromMaskInv & CASTLING_ALL_ROOK_LOCS_INV) {
 		if (td.canCastle_Q && move.from == CASTLING_ROOK_LOCS[turnTeam][0]) {
@@ -250,8 +269,10 @@ void BoardState::ExecuteMove(Move move) {
 	td.pieceSets[move.originalPiece].Set(move.from, 0);
 	td.pieceSets[move.resultPiece].Set(move.to, 1);
 
+#ifdef UPDATE_HASHES
 	hash ^= Zobrist::HashPiece(move.originalPiece, move.from, turnTeam);
 	hash ^= Zobrist::HashPiece(move.resultPiece, move.to, turnTeam);
+#endif
 
 	if (etd.occupy & toMask) {
 		uint8_t capturedPieceType = pieceTypes[move.to];
@@ -266,7 +287,16 @@ void BoardState::ExecuteMove(Move move) {
 	pieceTypes[move.to] = move.resultPiece;
 
 	UpdateAttacksAndPins(turnTeam);
+
+#ifdef UPDATE_HASHES
+	hash ^= Zobrist::HashTurn(turnTeam);
+#endif
+
 	turnTeam = !turnTeam;
+
+#ifdef UPDATE_HASHES
+	hash ^= Zobrist::HashTurn(turnTeam);
+#endif
 }
 
 void BoardState::ForceUpdateAll() {
@@ -284,6 +314,13 @@ void BoardState::ForceUpdateAll() {
 		td.totalValue = 0;
 #endif
 
+#ifdef _DEBUG
+		for (int i = 0; i < PT_AMOUNT; i++) {
+			BitBoard pieceSetOutsideOccupy = td.pieceSets[i] & (~td.occupy);
+			ASSERT(pieceSetOutsideOccupy == 0);
+		}
+#endif
+
 		td.occupy.Iterate(
 			[&](uint64_t i) {
 				for (int j = 0; j < PT_AMOUNT; j++) {
@@ -294,6 +331,9 @@ void BoardState::ForceUpdateAll() {
 						pieceValues[i] = val;
 						td.totalValue += val;
 #endif
+#ifdef UPDATE_HASHES
+						hash ^= Zobrist::HashPiece(j, i, team);
+#endif
 					}
 				}
 					
@@ -301,9 +341,6 @@ void BoardState::ForceUpdateAll() {
 		);
 
 #ifdef UPDATE_HASHES
-		for (int i = 0; i < PT_AMOUNT; i++)
-			hash ^= Zobrist::HashBitBoard(td.pieceSets[i], i, team);
-
 		hash ^= Zobrist::HashCastleRights(team, td.canCastle_Q, td.canCastle_K);
 #endif
 	}
