@@ -57,7 +57,7 @@ typedef uint8_t byte;
 #pragma endregion
 
 #pragma region Printing and Strings
-#define LOG(s) { std::cout << std::dec << s << std::endl; }
+#define LOG(s) { std::cout << STR(s << std::endl); }
 #define STR(s) ([=]{ std::stringstream __macroStream; __macroStream << s; return __macroStream.str(); }())
 
 // DLOG (debug-log) only works in debug builds
