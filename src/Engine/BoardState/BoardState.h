@@ -5,6 +5,7 @@
 #define HALF_MOVE_DRAW_COUNT 100
 
 #define UPDATE_VALUES
+#define UPDATE_HASHES
 
 // Stores all info for the state of a chess game
 struct BoardState {
@@ -71,6 +72,12 @@ struct BoardState {
 	// Position of the pawn that can be captured by en passant
 	// NOTE: Only valid if enPassantToMask != 0
 	Pos enPassantPawnPos;
+
+	// Which type of piece is at which position
+	uint8_t pieceTypes[BD_SQUARE_AMOUNT];
+
+	// The 64-bit zobrist hash of the board
+	uint64_t hash;
 
 	// Values of each piece
 	float pieceValues[BD_SQUARE_AMOUNT];

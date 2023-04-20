@@ -259,6 +259,7 @@ void GeneratePieceValues() {
 
 void LookupGen::InitOnce() {
 	LOG("Initializing lookup data...");
+
 	{ // Only run once
 		static bool once = true;
 		if (!once)

@@ -1,5 +1,6 @@
 #include "BoardState.h"
 #include "../LookupGen/LookupGen.h"
+#include "../Zobrist/Zobrist.h"
 
 template <uint8_t TEAM>
 FINLINE void _UpdateAttacksAndPins(BoardState& board) {
@@ -211,21 +212,37 @@ void BoardState::ExecuteMove(Move move) {
 		CASTLING_ALL_ROOK_LOCS = ANI_BM('A1') | ANI_BM('H1') | ANI_BM('A8') | ANI_BM('H8'),
 		CASTLING_ALL_ROOK_LOCS_INV = ~CASTLING_ALL_ROOK_LOCS;
 
-	if (fromMaskInv & CASTLING_ALL_ROOK_LOCS_INV) {
-		if (td.canCastle_Q && move.from == CASTLING_ROOK_LOCS[turnTeam][0])
-			td.canCastle_Q = false;
+#ifdef UPDATE_HASHES
+	// Remove castling rights from hash
+	hash ^= Zobrist::HashCastleRights(turnTeam, td.canCastle_Q, td.canCastle_K);
+	hash ^= Zobrist::HashCastleRights(!turnTeam, etd.canCastle_Q, etd.canCastle_K);
+#endif
 
-		if (td.canCastle_K && move.from == CASTLING_ROOK_LOCS[turnTeam][1])
+	if (fromMaskInv & CASTLING_ALL_ROOK_LOCS_INV) {
+		if (td.canCastle_Q && move.from == CASTLING_ROOK_LOCS[turnTeam][0]) {
+			td.canCastle_Q = false;
+		}
+
+		if (td.canCastle_K && move.from == CASTLING_ROOK_LOCS[turnTeam][1]) {
 			td.canCastle_K = false;
+		}
 	}
 
 	if (toMask & CASTLING_ALL_ROOK_LOCS) {
-		if (etd.canCastle_Q && move.to == CASTLING_ROOK_LOCS[!turnTeam][0])
+		if (etd.canCastle_Q && move.to == CASTLING_ROOK_LOCS[!turnTeam][0]) {
 			etd.canCastle_Q = false;
+		}
 
-		if (etd.canCastle_K && move.to == CASTLING_ROOK_LOCS[!turnTeam][1])
+		if (etd.canCastle_K && move.to == CASTLING_ROOK_LOCS[!turnTeam][1]) {
 			etd.canCastle_K = false;
+		}
 	}
+
+#ifdef UPDATE_HASHES
+	// Re-add castling rights from hash
+	hash ^= Zobrist::HashCastleRights(turnTeam, td.canCastle_Q, td.canCastle_K);
+	hash ^= Zobrist::HashCastleRights(!turnTeam, etd.canCastle_Q, etd.canCastle_K);
+#endif
 
 	// Update occupy
 	td.occupy &= fromMaskInv;
@@ -233,45 +250,68 @@ void BoardState::ExecuteMove(Move move) {
 	td.pieceSets[move.originalPiece].Set(move.from, 0);
 	td.pieceSets[move.resultPiece].Set(move.to, 1);
 
+	hash ^= Zobrist::HashPiece(move.originalPiece, move.from, turnTeam);
+	hash ^= Zobrist::HashPiece(move.resultPiece, move.to, turnTeam);
+
 	if (etd.occupy & toMask) {
-		etd.pieceSets[PT_PAWN] &= toMaskInv;
-		etd.pieceSets[PT_ROOK] &= toMaskInv;
-		etd.pieceSets[PT_KNIGHT] &= toMaskInv;
-		etd.pieceSets[PT_BISHOP] &= toMaskInv;
-		etd.pieceSets[PT_QUEEN] &= toMaskInv;
+		uint8_t capturedPieceType = pieceTypes[move.to];
+		etd.pieceSets[capturedPieceType] &= toMaskInv;
+#ifdef UPDATE_HASHES
+		hash ^= Zobrist::HashPiece(capturedPieceType, move.to, !turnTeam);
+#endif
 		etd.occupy &= toMaskInv;
 	}
+
+	// Update piece types
+	pieceTypes[move.to] = move.resultPiece;
 
 	UpdateAttacksAndPins(turnTeam);
 	turnTeam = !turnTeam;
 }
 
 void BoardState::ForceUpdateAll() {
+#ifdef UPDATE_HASHES
+	hash = 0;
+#endif
+
 	for (uint8_t team = 0; team < TEAM_AMOUNT; team++) {
 
 		// Update attacks and pins
 		UpdateAttacksAndPins(team);
 
+		auto& td = teamData[team];
 #ifdef UPDATE_VALUES
-		{ // Update piece values
-			auto& td = teamData[team];
-			td.totalValue = 0;
+		td.totalValue = 0;
+#endif
 
-			td.occupy.Iterate(
-				[&](uint64_t i) {
-					for (int j = 0; j < PT_AMOUNT; j++) {
-						if (td.pieceSets[j][i]) {
-							float val = LookupGen::GetPieceValue(j, i, team);
-							pieceValues[i] = val;
-							td.totalValue += val;
-						}
+		td.occupy.Iterate(
+			[&](uint64_t i) {
+				for (int j = 0; j < PT_AMOUNT; j++) {
+					if (td.pieceSets[j][i]) {
+						pieceTypes[i] = j;
+#ifdef UPDATE_VALUES
+						float val = LookupGen::GetPieceValue(j, i, team);
+						pieceValues[i] = val;
+						td.totalValue += val;
+#endif
 					}
-					
 				}
-			);
-		}
+					
+			}
+		);
+
+#ifdef UPDATE_HASHES
+		for (int i = 0; i < PT_AMOUNT; i++)
+			hash ^= Zobrist::HashBitBoard(td.pieceSets[i], i, team);
+
+		hash ^= Zobrist::HashCastleRights(team, td.canCastle_Q, td.canCastle_K);
 #endif
 	}
+
+#ifdef UPDATE_HASHES
+	hash ^= Zobrist::HashEnPassant(enPassantToMask != 0, enPassantPawnPos);
+	hash ^= Zobrist::HashTurn(turnTeam);
+#endif
 }
 
 std::ostream& operator <<(std::ostream& stream, const BoardState& boardState) {
