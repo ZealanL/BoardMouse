@@ -7,7 +7,7 @@ namespace Zobrist {
 		pieceHashKeys[TEAM_AMOUNT][PT_AMOUNT][BD_SQUARE_AMOUNT],
 		castleHashKeys[TEAM_AMOUNT][2],
 		enPassantHashKeys[BD_SQUARE_AMOUNT],
-		turnHashKeys[TEAM_AMOUNT];
+		turnHashKey;
 
 	void InitOnce();
 	uint64_t HashBitBoard(BitBoard board, uint8_t piecesType, uint8_t team);
@@ -29,8 +29,8 @@ namespace Zobrist {
 		return hash;
 	}
 
-	FINLINE uint64_t HashTurn(uint8_t turnTeam) {
-		return turnHashKeys[turnTeam];
+	FINLINE uint64_t HashTurn() {
+		return turnHashKey;
 	}
 
 	FINLINE uint64_t HashPiece(uint8_t pieceType, Pos pos, uint8_t team) {

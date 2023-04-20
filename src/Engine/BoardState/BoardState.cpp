@@ -294,14 +294,10 @@ void BoardState::ExecuteMove(Move move) {
 	UpdateAttacksAndPins(turnTeam);
 
 #ifdef UPDATE_HASHES
-	hash ^= Zobrist::HashTurn(turnTeam);
+	hash ^= Zobrist::turnHashKey;
 #endif
 
 	turnTeam = !turnTeam;
-
-#ifdef UPDATE_HASHES
-	hash ^= Zobrist::HashTurn(turnTeam);
-#endif
 }
 
 void BoardState::ForceUpdateAll() {
@@ -352,7 +348,8 @@ void BoardState::ForceUpdateAll() {
 
 #ifdef UPDATE_HASHES
 	hash ^= Zobrist::HashEnPassant(enPassantToMask != 0, enPassantPawnPos);
-	hash ^= Zobrist::HashTurn(turnTeam);
+	if (turnTeam == TEAM_BLACK)
+		hash ^= Zobrist::HashTurn();
 #endif
 }
 

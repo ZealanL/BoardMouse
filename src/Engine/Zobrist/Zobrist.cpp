@@ -4,7 +4,7 @@ uint64_t
 	Zobrist::pieceHashKeys[TEAM_AMOUNT][PT_AMOUNT][BD_SQUARE_AMOUNT] = {},
 	Zobrist::castleHashKeys[TEAM_AMOUNT][2] = {},
 	Zobrist::enPassantHashKeys[BD_SQUARE_AMOUNT] = {},
-	Zobrist::turnHashKeys[TEAM_AMOUNT] = {};
+	Zobrist::turnHashKey = {};
 
 uint64_t GenerateKey() {
 	// TODO: Use better random engine
@@ -36,7 +36,7 @@ void Zobrist::InitOnce() {
 	GenerateKeys(pieceHashKeys, sizeof(pieceHashKeys) / sizeof(uint64_t));
 	GenerateKeys(castleHashKeys, sizeof(castleHashKeys) / sizeof(uint64_t));
 	GenerateKeys(enPassantHashKeys, sizeof(enPassantHashKeys) / sizeof(uint64_t));
-	GenerateKeys(turnHashKeys, sizeof(turnHashKeys) / sizeof(uint64_t));
+	turnHashKey = GenerateKey();
 
 	LOG(" > Done.");
 }
