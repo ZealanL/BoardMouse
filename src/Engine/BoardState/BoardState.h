@@ -4,7 +4,7 @@
 
 #define HALF_MOVE_DRAW_COUNT 100
 
-//#define UPDATE_VALUES
+#define UPDATE_VALUES
 
 // Stores all info for the state of a chess game
 struct BoardState {
