@@ -19,7 +19,9 @@ struct BoardState {
 		uint8_t resultPiece;
 
 		friend std::ostream& operator<<(std::ostream& stream, const Move& move) {
-			stream << "[from " << move.from << " to " << move.to << "]";
+			stream << move.from << move.to;
+			if (move.originalPiece != move.resultPiece)
+				stream << PT_CHARS[move.resultPiece];
 			return stream;
 		}
 	};
