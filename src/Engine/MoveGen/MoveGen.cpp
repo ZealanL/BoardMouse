@@ -235,8 +235,8 @@ FINLINE void _GetMoves(BoardState& board, uint64_t checkersAmount, CALLBACK call
 							BoardState::Move castleMove = {
 								td.kingPos,
 								td.kingPos + (i ? 2 : -2),
-								PT_ROOK,
-								PT_ROOK
+								PT_KING,
+								PT_KING
 							};
 							callback(castleMove);
 						}
