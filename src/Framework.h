@@ -2,6 +2,8 @@
 
 // Framework.h is the lowest-level include header to be used by anything and everything
 
+#define BM_VERSION "v0.0"
+
 #pragma region STL Includes
 #define _USE_MATH_DEFINES
 
