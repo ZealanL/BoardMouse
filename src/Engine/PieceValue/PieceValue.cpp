@@ -1,6 +1,6 @@
 #include "PieceValue.h"
 
-float PieceValue::CalcPieceValue(uint8_t pieceType, uint8_t team, Pos pos, bool isEndGame) {
+Value PieceValue::CalcPieceValue(uint8_t pieceType, uint8_t team, Pos pos, bool isEndGame) {
 	uint8_t 
 		x = pos.X(),
 		y = pos.Y();
@@ -30,5 +30,5 @@ float PieceValue::CalcPieceValue(uint8_t pieceType, uint8_t team, Pos pos, bool 
 
 	float val = PIECE_BASE_VALUES[pieceType];
 
-	return val;
+	return (Value)(val * 100);
 }

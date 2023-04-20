@@ -1,6 +1,7 @@
 #pragma once
 #include "../BitBoard/BitBoard.h"
 #include "../Pos/Pos.h"
+#include "../PieceValue/PieceValue.h"
 
 // The number of entries in a slider's occlusion lookup array
 // Since the bit where the slider is present is ignored, there are 7 possible blocking spaces
@@ -55,9 +56,9 @@ namespace LookupGen {
 	// Memory size: Negligible
 	extern BitBoard rankMasks[BD_SQUARE_AMOUNT];
 
-	// Values for each piece on each square
+	// Values for each piece on each square, in centipawns
 	// Memory size: Negligible
-	extern float pieceValues[TEAM_AMOUNT][PT_AMOUNT][BD_SQUARE_AMOUNT];
+	extern Value pieceValues[TEAM_AMOUNT][PT_AMOUNT][BD_SQUARE_AMOUNT];
 
 	// Can be called only once, initializes all lookup data
 	void InitOnce();
@@ -143,7 +144,7 @@ namespace LookupGen {
 		return rankMasks[pos];
 	}
 
-	FINLINE float GetPieceValue(uint8_t pieceType, Pos pos, uint8_t team) {
+	FINLINE size_t GetPieceValue(uint8_t pieceType, Pos pos, uint8_t team) {
 		return pieceValues[team][pieceType][pos];
 	}
 }

@@ -190,7 +190,7 @@ void BoardState::ExecuteMove(Move move) {
 #ifdef UPDATE_VALUES
 			// Update rook value
 			td.totalValue -= pieceValues[rookFromPos];
-			float newValue = LookupGen::GetPieceValue(PT_ROOK, rookToPos, turnTeam);
+			size_t newValue = LookupGen::GetPieceValue(PT_ROOK, rookToPos, turnTeam);
 			pieceValues[move.to] = newValue;
 			td.totalValue += newValue;
 #endif
@@ -232,7 +232,7 @@ void BoardState::ExecuteMove(Move move) {
 			etd.totalValue -= pieceValues[move.to];
 
 		td.totalValue -= pieceValues[move.from];
-		float newValue = LookupGen::GetPieceValue(move.resultPiece, move.to, turnTeam);
+		Value newValue = LookupGen::GetPieceValue(move.resultPiece, move.to, turnTeam);
 		pieceValues[move.to] = newValue;
 		td.totalValue += newValue;
 	}
@@ -332,7 +332,7 @@ void BoardState::ForceUpdateAll() {
 					if (td.pieceSets[j][i]) {
 						pieceTypes[i] = j;
 #ifdef UPDATE_VALUES
-						float val = LookupGen::GetPieceValue(j, i, team);
+						Value val = LookupGen::GetPieceValue(j, i, team);
 						pieceValues[i] = val;
 						td.totalValue += val;
 #endif

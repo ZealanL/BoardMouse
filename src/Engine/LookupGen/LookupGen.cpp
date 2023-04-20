@@ -47,7 +47,7 @@ BitBoard LookupGen::rankMasks[BD_SQUARE_AMOUNT] = {};
 
 // Values for each piece on each square
 // Memory size: Negligible
-float LookupGen::pieceValues[TEAM_AMOUNT][PT_AMOUNT][BD_SQUARE_AMOUNT] = {};
+Value LookupGen::pieceValues[TEAM_AMOUNT][PT_AMOUNT][BD_SQUARE_AMOUNT] = {};
 
 void GenerateNonSlidingPieceMoves(bool isKing) {
 	pair<int, int>

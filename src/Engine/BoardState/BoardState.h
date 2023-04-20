@@ -1,6 +1,7 @@
 #pragma once
 #include "../BitBoard/BitBoard.h"
 #include "../Pos/Pos.h"
+#include "../PieceValue/PieceValue.h"
 
 #define HALF_MOVE_DRAW_COUNT 100
 
@@ -80,7 +81,7 @@ struct BoardState {
 	uint64_t hash;
 
 	// Values of each piece
-	float pieceValues[BD_SQUARE_AMOUNT];
+	Value pieceValues[BD_SQUARE_AMOUNT];
 
 	// Updates all persistent values, call this when you modify the board beyond ExecuteMove()
 	void ForceUpdateAll();
