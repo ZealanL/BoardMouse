@@ -157,6 +157,11 @@ void BoardState::ExecuteMove(Move move) {
 			hash ^= Zobrist::HashPiece(PT_ROOK, enPassantPawnPos, !turnTeam);
 #endif
 
+#ifdef UPDATE_VALUES
+			// Remove pawn value
+			td.totalValue -= LookupGen::GetPieceValue(PT_PAWN, enPassantPawnPos, !turnTeam);
+#endif
+
 		} else if (abs(move.to - move.from) > BD_SIZE + 1) {
 			// Double pawn move, set en passant mask behind us
 			newEnPassantMask = (turnTeam == TEAM_WHITE ? toMask >> BD_SIZE : toMask << BD_SIZE);
