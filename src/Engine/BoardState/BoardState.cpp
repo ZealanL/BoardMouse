@@ -232,8 +232,15 @@ void BoardState::ExecuteMove(Move move) {
 	td.occupy |= toMask;
 	td.pieceSets[move.originalPiece].Set(move.from, 0);
 	td.pieceSets[move.resultPiece].Set(move.to, 1);
-	
-	etd.occupy &= toMaskInv;
+
+	if (etd.occupy & toMask) {
+		etd.pieceSets[PT_PAWN] &= toMaskInv;
+		etd.pieceSets[PT_ROOK] &= toMaskInv;
+		etd.pieceSets[PT_KNIGHT] &= toMaskInv;
+		etd.pieceSets[PT_BISHOP] &= toMaskInv;
+		etd.pieceSets[PT_QUEEN] &= toMaskInv;
+		etd.occupy &= toMaskInv;
+	}
 
 	UpdateAttacksAndPins(turnTeam);
 	turnTeam = !turnTeam;

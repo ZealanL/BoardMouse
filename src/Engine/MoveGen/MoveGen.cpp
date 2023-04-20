@@ -169,7 +169,7 @@ FINLINE void _GetMoves(BoardState& board, uint64_t checkersAmount, CALLBACK call
 			}
 		);
 
-		pieces = td.pieceSets[PT_ROOK] & teamOccupy;
+		pieces = td.pieceSets[PT_ROOK];
 		pieces.Iterate(
 			[&](uint64_t i) {
 				BitBoard baseMoves, moves;
@@ -182,7 +182,7 @@ FINLINE void _GetMoves(BoardState& board, uint64_t checkersAmount, CALLBACK call
 			}
 		);
 
-		pieces = td.pieceSets[PT_KNIGHT] & teamOccupy;
+		pieces = td.pieceSets[PT_KNIGHT];
 		pieces.Iterate(
 			[&](uint64_t i) {
 				BitBoard moves = LookupGen::GetKnightMoves(i) & normalMoveMask;
@@ -193,7 +193,7 @@ FINLINE void _GetMoves(BoardState& board, uint64_t checkersAmount, CALLBACK call
 			}
 		);
 
-		pieces = td.pieceSets[PT_BISHOP] & teamOccupy;
+		pieces = td.pieceSets[PT_BISHOP];
 		pieces.Iterate(
 			[&](uint64_t i) {
 				BitBoard baseMoves, moves;
@@ -206,7 +206,7 @@ FINLINE void _GetMoves(BoardState& board, uint64_t checkersAmount, CALLBACK call
 			}
 		);
 
-		pieces = td.pieceSets[PT_QUEEN] & td.occupy;
+		pieces = td.pieceSets[PT_QUEEN];
 		pieces.Iterate(
 			[&](uint64_t i) {
 				BitBoard baseMoves, moves;
