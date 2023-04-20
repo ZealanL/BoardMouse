@@ -1,12 +1,11 @@
 #include "FEN.h"
 
-void FEN::Parse(string fenStr, BoardState& boardStateOut) {
+void FEN::Parse(vector<string> tokens, BoardState& boardStateOut) {
 
 	// Nobody can castle by default
 	for (int i = 0; i < 2; i++)
 		boardStateOut.teamData[i].canCastle_K = boardStateOut.teamData[i].canCastle_Q = false;
 
-	vector<string> tokens = SPLIT_STR(fenStr, " ");
 	if (tokens.empty())
 		throw "FEN string is empty";
 
