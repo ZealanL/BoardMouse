@@ -1,6 +1,5 @@
 #include "BoardState.h"
 #include "../LookupGen/LookupGen.h"
-#include "../Zobrist/Zobrist.h"
 
 template <uint8_t TEAM>
 FINLINE void _UpdateAttacksAndPins(BoardState& board) {
@@ -138,8 +137,8 @@ void BoardState::ExecuteMove(Move move) {
 
 #ifdef UPDATE_HASHES
 	// Remove castling rights from hash
-	hash ^= Zobrist::HashCastleRights(turnTeam, td.canCastle_Q, td.canCastle_K);
-	hash ^= Zobrist::HashCastleRights(!turnTeam, etd.canCastle_Q, etd.canCastle_K);
+	hash ^= LookupGen::HashCastleRights(turnTeam, td.canCastle_Q, td.canCastle_K);
+	hash ^= LookupGen::HashCastleRights(!turnTeam, etd.canCastle_Q, etd.canCastle_K);
 #endif
 
 	Pos newEnPassantPos = 0;
@@ -154,7 +153,7 @@ void BoardState::ExecuteMove(Move move) {
 
 #ifdef UPDATE_HASHES
 			// Remove pawn hash
-			hash ^= Zobrist::HashPiece(PT_ROOK, enPassantPawnPos, !turnTeam);
+			hash ^= LookupGen::HashPiece(PT_ROOK, enPassantPawnPos, !turnTeam);
 #endif
 
 #ifdef UPDATE_VALUES
@@ -197,8 +196,8 @@ void BoardState::ExecuteMove(Move move) {
 
 #ifdef UPDATE_HASHES
 			// Update rook hash
-			hash ^= Zobrist::HashPiece(PT_ROOK, rookFromPos, turnTeam);
-			hash ^= Zobrist::HashPiece(PT_ROOK, rookToPos, turnTeam);
+			hash ^= LookupGen::HashPiece(PT_ROOK, rookFromPos, turnTeam);
+			hash ^= LookupGen::HashPiece(PT_ROOK, rookToPos, turnTeam);
 #endif
 		}
 	}
@@ -207,8 +206,8 @@ void BoardState::ExecuteMove(Move move) {
 
 #ifdef UPDATE_HASHES
 		// Update en passant hashes
-		hash ^= Zobrist::HashEnPassant(enPassantToMask != 0, enPassantPawnPos);
-		hash ^= Zobrist::HashEnPassant(newEnPassantMask != 0, newEnPassantPos);
+		hash ^= LookupGen::HashEnPassant(enPassantToMask != 0, enPassantPawnPos);
+		hash ^= LookupGen::HashEnPassant(newEnPassantMask != 0, newEnPassantPos);
 #endif
 
 		enPassantToMask = newEnPassantMask;
@@ -264,8 +263,8 @@ void BoardState::ExecuteMove(Move move) {
 
 #ifdef UPDATE_HASHES
 	// Re-add castling rights from hash
-	hash ^= Zobrist::HashCastleRights(turnTeam, td.canCastle_Q, td.canCastle_K);
-	hash ^= Zobrist::HashCastleRights(!turnTeam, etd.canCastle_Q, etd.canCastle_K);
+	hash ^= LookupGen::HashCastleRights(turnTeam, td.canCastle_Q, td.canCastle_K);
+	hash ^= LookupGen::HashCastleRights(!turnTeam, etd.canCastle_Q, etd.canCastle_K);
 #endif
 
 	// Update occupy
@@ -275,15 +274,15 @@ void BoardState::ExecuteMove(Move move) {
 	td.pieceSets[move.resultPiece].Set(move.to, 1);
 
 #ifdef UPDATE_HASHES
-	hash ^= Zobrist::HashPiece(move.originalPiece, move.from, turnTeam);
-	hash ^= Zobrist::HashPiece(move.resultPiece, move.to, turnTeam);
+	hash ^= LookupGen::HashPiece(move.originalPiece, move.from, turnTeam);
+	hash ^= LookupGen::HashPiece(move.resultPiece, move.to, turnTeam);
 #endif
 
 	if (etd.occupy & toMask) {
 		uint8_t capturedPieceType = pieceTypes[move.to];
 		etd.pieceSets[capturedPieceType] &= toMaskInv;
 #ifdef UPDATE_HASHES
-		hash ^= Zobrist::HashPiece(capturedPieceType, move.to, !turnTeam);
+		hash ^= LookupGen::HashPiece(capturedPieceType, move.to, !turnTeam);
 #endif
 		etd.occupy &= toMaskInv;
 	}
@@ -294,7 +293,7 @@ void BoardState::ExecuteMove(Move move) {
 	UpdateAttacksAndPins(turnTeam);
 
 #ifdef UPDATE_HASHES
-	hash ^= Zobrist::turnHashKey;
+	hash ^= LookupGen::turnHashKey;
 #endif
 
 	turnTeam = !turnTeam;
@@ -333,7 +332,7 @@ void BoardState::ForceUpdateAll() {
 						td.totalValue += val;
 #endif
 #ifdef UPDATE_HASHES
-						hash ^= Zobrist::HashPiece(j, i, team);
+						hash ^= LookupGen::HashPiece(j, i, team);
 #endif
 					}
 				}
@@ -342,14 +341,14 @@ void BoardState::ForceUpdateAll() {
 		);
 
 #ifdef UPDATE_HASHES
-		hash ^= Zobrist::HashCastleRights(team, td.canCastle_Q, td.canCastle_K);
+		hash ^= LookupGen::HashCastleRights(team, td.canCastle_Q, td.canCastle_K);
 #endif
 	}
 
 #ifdef UPDATE_HASHES
-	hash ^= Zobrist::HashEnPassant(enPassantToMask != 0, enPassantPawnPos);
+	hash ^= LookupGen::HashEnPassant(enPassantToMask != 0, enPassantPawnPos);
 	if (turnTeam == TEAM_BLACK)
-		hash ^= Zobrist::HashTurn();
+		hash ^= LookupGen::HashTurn();
 #endif
 }
 

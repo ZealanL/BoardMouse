@@ -1,6 +1,7 @@
 #include "LookupGen.h"
 
 #include "../PieceValue/PieceValue.h"
+#include "../Zobrist/Zobrist.h"
 
  BitBoard
 	 LookupGen::kingMoveLookup[BD_SQUARE_AMOUNT] = {},
@@ -48,6 +49,12 @@ BitBoard LookupGen::rankMasks[BD_SQUARE_AMOUNT] = {};
 // Values for each piece on each square
 // Memory size: Negligible
 Value LookupGen::pieceValues[TEAM_AMOUNT][PT_AMOUNT][BD_SQUARE_AMOUNT] = {};
+
+uint64_t
+	LookupGen::pieceHashKeys[TEAM_AMOUNT][PT_AMOUNT][BD_SQUARE_AMOUNT] = {},
+	LookupGen::castleHashKeys[TEAM_AMOUNT][2] = {},
+	LookupGen::enPassantHashKeys[BD_SQUARE_AMOUNT] = {},
+	LookupGen::turnHashKey = {};
 
 void GenerateNonSlidingPieceMoves(bool isKing) {
 	pair<int, int>
@@ -257,6 +264,21 @@ void GeneratePieceValues() {
 	}
 }
 
+template <typename T>
+void GenerateKeys(T keys, size_t amount) {
+	// TODO: Bad practice
+	uint64_t* flatArray = (uint64_t*)keys;
+	for (size_t i = 0; i < amount; i++)
+		flatArray[i] = Zobrist::GenerateKey();
+}
+
+void GenerateZobristKeys() {
+	GenerateKeys(LookupGen::pieceHashKeys, sizeof(LookupGen::pieceHashKeys) / sizeof(uint64_t));
+	GenerateKeys(LookupGen::castleHashKeys, sizeof(LookupGen::castleHashKeys) / sizeof(uint64_t));
+	GenerateKeys(LookupGen::enPassantHashKeys, sizeof(LookupGen::enPassantHashKeys) / sizeof(uint64_t));
+	LookupGen::turnHashKey = Zobrist::GenerateKey();
+}
+
 void LookupGen::InitOnce() {
 	LOG("Initializing lookup data...");
 
@@ -291,6 +313,9 @@ void LookupGen::InitOnce() {
 
 	DLOG(" > Generating piece values...");
 	GeneratePieceValues();
+
+	DLOG(" > Generating Zobrist keys...");
+	GenerateZobristKeys();
 
 	DLOG(" > Done!");
 }
