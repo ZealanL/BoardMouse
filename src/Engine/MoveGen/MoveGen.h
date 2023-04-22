@@ -1,9 +1,9 @@
 #pragma once
 #include "../BoardState/BoardState.h"
 
-typedef std::function<void(BoardState::Move& move)> MoveCallbackFn;
+typedef std::function<void(const BoardState::Move& move)> MoveCallbackFn;
 
 namespace MoveGen {
-	void GetMoves(BoardState& board, vector<BoardState::Move>& movesOut);
-	void GetMoves(BoardState& board, MoveCallbackFn callbackFn);
+	void GetMoves(const BoardState& board, vector<BoardState::Move>& movesOut);
+	void GetMoves(const BoardState& board, MoveCallbackFn callbackFn);
 }

@@ -63,7 +63,7 @@ FINLINE void AddMovesFromBB(Pos from, BitBoard toBB, CALLBACK callback) {
 }
 
 template <uint8_t TEAM, bool EN_PASSANT_AVAILABLE, bool ONLY_KING_MOVES, typename CALLBACK>
-FINLINE void _GetMoves(BoardState& board, uint64_t checkersAmount, CALLBACK callback) {
+FINLINE void _GetMoves(const BoardState& board, uint64_t checkersAmount, CALLBACK callback) {
 	auto& td = board.teamData[TEAM];
 	auto& etd = board.teamData[!TEAM];
 
@@ -256,7 +256,7 @@ FINLINE void _GetMoves(BoardState& board, uint64_t checkersAmount, CALLBACK call
 		_GetMoves<team, enPassant, 0>(board, checkersAmount, callback);
 
 template <typename T>
-void _GetMovesWrapper(BoardState& board, T callback) {
+void _GetMovesWrapper(const BoardState& board, T callback) {
 	int checkersAmount = board.teamData[!board.turnTeam].checkers.BitCount();
 	bool onlyKingMoves = checkersAmount > 1;
 	if (board.turnTeam == TEAM_WHITE) {
@@ -274,10 +274,10 @@ void _GetMovesWrapper(BoardState& board, T callback) {
 	}
 }
 
-void MoveGen::GetMoves(BoardState& board, vector<BoardState::Move>& movesOut) {
-	_GetMovesWrapper(board, [&](BoardState::Move& move) { movesOut.push_back(move); });
+void MoveGen::GetMoves(const BoardState& board, vector<BoardState::Move>& movesOut) {
+	_GetMovesWrapper(board, [&](const BoardState::Move& move) { movesOut.push_back(move); });
 }
 
-void MoveGen::GetMoves(BoardState& board, MoveCallbackFn callback) {
+void MoveGen::GetMoves(const BoardState& board, MoveCallbackFn callback) {
 	_GetMovesWrapper(board, callback);
 }
