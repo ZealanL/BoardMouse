@@ -1,8 +1,5 @@
 #include "LookupGen.h"
 
-#include "../PieceValue/PieceValue.h"
-#include "../Zobrist/Zobrist.h"
-
  BitBoard
 	 LookupGen::kingMoveLookup[BD_SQUARE_AMOUNT] = {},
 	 LookupGen::knightMoveLookup[BD_SQUARE_AMOUNT] = {},
@@ -50,7 +47,7 @@ BitBoard LookupGen::rankMasks[BD_SQUARE_AMOUNT] = {};
 // Memory size: Negligible
 Value LookupGen::pieceValues[TEAM_AMOUNT][PT_AMOUNT][BD_SQUARE_AMOUNT] = {};
 
-uint64_t
+ZobristHash
 	LookupGen::pieceHashKeys[TEAM_AMOUNT][PT_AMOUNT][BD_SQUARE_AMOUNT] = {},
 	LookupGen::castleHashKeys[TEAM_AMOUNT][2] = {},
 	LookupGen::enPassantHashKeys[BD_SQUARE_AMOUNT] = {},
@@ -273,9 +270,9 @@ void GenerateKeys(T keys, size_t amount) {
 }
 
 void GenerateZobristKeys() {
-	GenerateKeys(LookupGen::pieceHashKeys, sizeof(LookupGen::pieceHashKeys) / sizeof(uint64_t));
-	GenerateKeys(LookupGen::castleHashKeys, sizeof(LookupGen::castleHashKeys) / sizeof(uint64_t));
-	GenerateKeys(LookupGen::enPassantHashKeys, sizeof(LookupGen::enPassantHashKeys) / sizeof(uint64_t));
+	GenerateKeys(LookupGen::pieceHashKeys, sizeof(LookupGen::pieceHashKeys) / sizeof(ZobristHash));
+	GenerateKeys(LookupGen::castleHashKeys, sizeof(LookupGen::castleHashKeys) / sizeof(ZobristHash));
+	GenerateKeys(LookupGen::enPassantHashKeys, sizeof(LookupGen::enPassantHashKeys) / sizeof(ZobristHash));
 	LookupGen::turnHashKey = Zobrist::GenerateKey();
 }
 

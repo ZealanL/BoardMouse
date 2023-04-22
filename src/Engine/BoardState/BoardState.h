@@ -2,6 +2,7 @@
 #include "../BitBoard/BitBoard.h"
 #include "../Pos/Pos.h"
 #include "../PieceValue/PieceValue.h"
+#include "../Zobrist/Zobrist.h"
 
 #define HALF_MOVE_DRAW_COUNT 100
 
@@ -77,8 +78,8 @@ struct BoardState {
 	// Which type of piece is at which position
 	uint8_t pieceTypes[BD_SQUARE_AMOUNT];
 
-	// The 64-bit zobrist hash of the board
-	uint64_t hash;
+	// The Zobrist hash of this board state, updated incrementally as moves are made
+	ZobristHash hash;
 
 	// Values of each piece
 	Value pieceValues[BD_SQUARE_AMOUNT];

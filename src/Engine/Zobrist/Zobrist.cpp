@@ -1,6 +1,6 @@
 #include "Zobrist.h"
 
-uint64_t Zobrist::GenerateKey() {
+ZobristHash Zobrist::GenerateKey() {
 	// TODO: Use better random engine
 	static thread_local auto randEngine = std::default_random_engine();
 

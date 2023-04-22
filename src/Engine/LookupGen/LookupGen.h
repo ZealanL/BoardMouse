@@ -2,6 +2,7 @@
 #include "../BitBoard/BitBoard.h"
 #include "../Pos/Pos.h"
 #include "../PieceValue/PieceValue.h"
+#include "../Zobrist/Zobrist.h"
 
 // The number of entries in a slider's occlusion lookup array
 // Since the bit where the slider is present is ignored, there are 7 possible blocking spaces
@@ -62,7 +63,7 @@ namespace LookupGen {
 
 	// Various zobrist hashes for the board state
 	// Memory size: Negligible
-	extern uint64_t
+	extern ZobristHash
 		pieceHashKeys[TEAM_AMOUNT][PT_AMOUNT][BD_SQUARE_AMOUNT],
 		castleHashKeys[TEAM_AMOUNT][2],
 		enPassantHashKeys[BD_SQUARE_AMOUNT],
@@ -152,13 +153,13 @@ namespace LookupGen {
 		return rankMasks[pos];
 	}
 
-	FINLINE size_t GetPieceValue(uint8_t pieceType, Pos pos, uint8_t team) {
+	FINLINE Value GetPieceValue(uint8_t pieceType, Pos pos, uint8_t team) {
 		return pieceValues[team][pieceType][pos];
 	}
 
-	FINLINE uint64_t HashCastleRights(uint8_t team, bool canCastle_Q, bool canCastle_K) {
+	FINLINE ZobristHash HashCastleRights(uint8_t team, bool canCastle_Q, bool canCastle_K) {
 		// TODO: Probably slow, castle rights should be a single byte
-		uint64_t hash = 0;
+		ZobristHash hash = 0;
 		if (canCastle_Q)
 			hash ^= castleHashKeys[team][0];
 
@@ -167,18 +168,18 @@ namespace LookupGen {
 		return hash;
 	}
 
-	FINLINE uint64_t HashEnPassant(bool enPassantAvailable, Pos enPassantPos) {
-		uint64_t hash = 0;
+	FINLINE ZobristHash HashEnPassant(bool enPassantAvailable, Pos enPassantPos) {
+		ZobristHash hash = 0;
 		if (enPassantAvailable)
 			hash ^= enPassantHashKeys[enPassantPos];
 		return hash;
 	}
 
-	FINLINE uint64_t HashTurn() {
+	FINLINE ZobristHash HashTurn() {
 		return turnHashKey;
 	}
 
-	FINLINE uint64_t HashPiece(uint8_t pieceType, Pos pos, uint8_t team) {
+	FINLINE ZobristHash HashPiece(uint8_t pieceType, Pos pos, uint8_t team) {
 		return pieceHashKeys[team][pieceType][pos];
 	}
 }

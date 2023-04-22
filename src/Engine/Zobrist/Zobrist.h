@@ -1,6 +1,8 @@
 #include "../BitBoard/BitBoard.h"
 #include "../Pos/Pos.h"
 
+typedef uint64_t ZobristHash;
+
 namespace Zobrist {
-	uint64_t GenerateKey();
+	ZobristHash GenerateKey();
 }
