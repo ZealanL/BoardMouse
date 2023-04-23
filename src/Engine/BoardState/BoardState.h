@@ -21,10 +21,21 @@ struct BoardState {
 		// Usually set to the piece we moved, except when promoting pawns
 		uint8_t resultPiece;
 
+		Move() = default;
+
+		FINLINE bool IsValid() const {
+			return from != to;
+		}
+
 		friend std::ostream& operator<<(std::ostream& stream, const Move& move) {
-			stream << move.from << move.to;
-			if (move.originalPiece != move.resultPiece)
-				stream << PT_CHARS[move.resultPiece];
+			if (move.IsValid()) {
+				stream << move.from << move.to;
+				if (move.originalPiece != move.resultPiece)
+					stream << PT_CHARS[move.resultPiece];
+			} else {
+				stream << "[INVALID MOVE]";
+			}
+
 			return stream;
 		}
 	};
