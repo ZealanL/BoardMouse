@@ -2,5 +2,8 @@
 #include "../Framework.h"
 
 namespace UCI {
-	void ProcessCommand(vector<string> parts);
+	void Init();
+
+	// Returns true if command was successfully processed
+	bool ProcessCommand(vector<string> parts);
 }
