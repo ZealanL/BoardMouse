@@ -121,28 +121,28 @@ FINLINE void _GetMoves(const BoardState& board, uint64_t checkersAmount, CALLBAC
 						if (td.kingPos.Y() == moveFromY && isLegal) {
 							// We need to make sure this en passant capture wont reveal a sideways check
 
-							int enemyPiecesOnRankAmount = BitBoard(LookupGen::GetRankMask(i) & etd.occupy).BitCount();
+							BitBoard enemyRooksOrQueens = etd.pieceSets[PT_ROOK] | etd.pieceSets[PT_QUEEN];
+							BitBoard enemyRooksOrsQueenOnRank = (LookupGen::GetRankMask(i) & etd.occupy) & enemyRooksOrQueens;
+							if (enemyRooksOrsQueenOnRank != 0) {
 
-							if (enemyPiecesOnRankAmount > 1) {
-								int kingPosX = td.kingPos.X();
-								int moveFromX = i.X();
-								int moveToX = board.enPassantPawnPos.X();
-								int potentialRevealedDirX = (moveFromX < kingPosX) ? 1 : -1;
-								int stopX = (potentialRevealedDirX > 0) ? BD_SIZE : -1;
+								// There is an enemy queen or rook on this rank
+								// We need to make sure it wont be able to attack us
+								BitBoard combinedOccupyWithoutBothPawns = combinedOccupy;
+								combinedOccupyWithoutBothPawns.Set(board.enPassantPawnPos, false);
+								combinedOccupyWithoutBothPawns.Set(i, false);
 
-								// TODO: Make more efficient
-								for (int x = kingPosX - potentialRevealedDirX; x != stopX; x -= potentialRevealedDirX) {
-									if (x == moveFromX || x == moveToX)
-										continue;
+								enemyRooksOrsQueenOnRank.Iterate(
+									[&](uint64_t i) {
+										BitBoard baseMoves, possibleRookMoves;
+										LookupGen::GetRookMoves(i, combinedOccupyWithoutBothPawns, baseMoves, possibleRookMoves);
+										if (possibleRookMoves[td.kingPos]) {
+											// They could hit our king, this moves is illegal
+											isLegal = false;
 
-									Pos pos = Pos(x, moveFromY);
-									if (combinedOccupy[pos]) {
-										if (etd.occupy[pos]) {
-											isLegal = !(etd.pieceSets[PT_ROOK][pos] || etd.pieceSets[PT_QUEEN][pos]);
+											// TODO: Find some way to break out of this loop
 										}
-										break;
 									}
-								}
+								);
 							}
 						}
 						
