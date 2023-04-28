@@ -408,7 +408,7 @@ std::ostream& operator <<(std::ostream& stream, const BoardState& boardState) {
 		}
 		stream << std::endl;
 	}
-	stream << "}";
+	stream << "} (" << TEAM_NAMES[boardState.turnTeam] << " to move)";
 
 	return stream;
 }
