@@ -58,8 +58,9 @@ namespace LookupGen {
 	extern BitBoard rankMasks[BD_SQUARE_AMOUNT];
 
 	// Values for each piece on each square, in centipawns
+	// Second dimension is if this is an endgame
 	// Memory size: Negligible
-	extern Value pieceValues[TEAM_AMOUNT][PT_AMOUNT][BD_SQUARE_AMOUNT];
+	extern Value pieceValues[TEAM_AMOUNT][2][PT_AMOUNT][BD_SQUARE_AMOUNT];
 
 	// Various zobrist hashes for the board state
 	// Memory size: Negligible
@@ -153,8 +154,8 @@ namespace LookupGen {
 		return rankMasks[pos];
 	}
 
-	FINLINE Value GetPieceValue(uint8_t pieceType, Pos pos, uint8_t team) {
-		return pieceValues[team][pieceType][pos];
+	FINLINE Value GetPieceValue(uint8_t pieceType, Pos pos, uint8_t team, bool isEndgame = false) {
+		return pieceValues[team][isEndgame][pieceType][pos];
 	}
 
 	FINLINE ZobristHash HashCastleRights(uint8_t team, bool canCastle_Q, bool canCastle_K) {

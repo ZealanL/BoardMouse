@@ -45,7 +45,7 @@ BitBoard LookupGen::rankMasks[BD_SQUARE_AMOUNT] = {};
 
 // Values for each piece on each square
 // Memory size: Negligible
-Value LookupGen::pieceValues[TEAM_AMOUNT][PT_AMOUNT][BD_SQUARE_AMOUNT] = {};
+Value LookupGen::pieceValues[TEAM_AMOUNT][2][PT_AMOUNT][BD_SQUARE_AMOUNT] = {};
 
 ZobristHash
 	LookupGen::pieceHashKeys[TEAM_AMOUNT][PT_AMOUNT][BD_SQUARE_AMOUNT] = {},
@@ -251,11 +251,12 @@ void GenerateRankMasks() {
 
 void GeneratePieceValues() {
 	for (uint8_t team = 0; team < TEAM_AMOUNT; team++) {
-		for (uint8_t pieceType = 0; pieceType < PT_AMOUNT; pieceType++) {
-			for (Pos pos = 0; pos < BD_SQUARE_AMOUNT; pos++) {
-				// TODO: Make extra dimension for endgames
-				float val = PieceValue::CalcPieceSquareValue(pieceType, team, pos, false);
-				LookupGen::pieceValues[team][pieceType][pos] = val;
+		for (uint8_t isEndgame = 0; isEndgame < 2; isEndgame++) {
+			for (uint8_t pieceType = 0; pieceType < PT_AMOUNT; pieceType++) {
+				for (Pos pos = 0; pos < BD_SQUARE_AMOUNT; pos++) {
+					float val = PieceValue::CalcPieceSquareValue(pieceType, team, pos, false);
+					LookupGen::pieceValues[team][isEndgame][pieceType][pos] = val;
+				}
 			}
 		}
 	}
