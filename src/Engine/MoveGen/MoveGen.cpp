@@ -36,8 +36,9 @@ constexpr uint64_t CASTLE_SAFETY_MASKS[TEAM_AMOUNT][CASTLE_SIDE_AMOUNT] = {
 };
 
 template <uint8_t PIECE_TYPE, typename CALLBACK>
-FINLINE void AddMovesFromBB(Pos from, BitBoard toBB, CALLBACK callback) {
+FINLINE void AddMovesFromBB(Pos from, BitBoard toBB, BitBoard enemyOccupy, CALLBACK callback) {
 	toBB.Iterate([&](Pos i) {
+		bool isCapture = enemyOccupy[i];
 
 		// Promotion check
 		if constexpr (PIECE_TYPE == PT_PAWN) {
@@ -45,10 +46,10 @@ FINLINE void AddMovesFromBB(Pos from, BitBoard toBB, CALLBACK callback) {
 			if (y == 0 || y == (BD_SIZE - 1)) {
 				// Promotion
 				BoardState::Move
-					pKnight = { from, i, PT_PAWN, PT_KNIGHT },
-					pBishop = { from, i, PT_PAWN, PT_BISHOP },
-					pRook = { from, i, PT_PAWN, PT_ROOK },
-					pQueen = { from, i, PT_PAWN, PT_QUEEN };
+					pKnight = { from, i, PT_PAWN, PT_KNIGHT, isCapture },
+					pBishop = { from, i, PT_PAWN, PT_BISHOP, isCapture },
+					pRook = { from, i, PT_PAWN, PT_ROOK, isCapture },
+					pQueen = { from, i, PT_PAWN, PT_QUEEN, isCapture };
 				callback(pKnight);
 				callback(pBishop);
 				callback(pRook);
@@ -57,7 +58,7 @@ FINLINE void AddMovesFromBB(Pos from, BitBoard toBB, CALLBACK callback) {
 			}
 		}
 
-		BoardState::Move move = { from, i, PIECE_TYPE, PIECE_TYPE };
+		BoardState::Move move = { from, i, PIECE_TYPE, PIECE_TYPE, isCapture };
 		callback(move);
 	});
 }
@@ -165,7 +166,12 @@ FINLINE void _GetMoves(const BoardState& board, uint64_t checkersAmount, CALLBAC
 				if (pinnedPieces[i])
 					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
-				AddMovesFromBB<PT_PAWN>(i, moves, callback);
+				BitBoard captureBB = etd.occupy;
+
+				if constexpr (EN_PASSANT_AVAILABLE) {
+					captureBB |= board.enPassantToMask;
+				}
+				AddMovesFromBB<PT_PAWN>(i, moves, captureBB, callback);
 			}
 		);
 
@@ -178,7 +184,7 @@ FINLINE void _GetMoves(const BoardState& board, uint64_t checkersAmount, CALLBAC
 				if (pinnedPieces[i])
 					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
-				AddMovesFromBB<PT_ROOK>(i, moves, callback);
+				AddMovesFromBB<PT_ROOK>(i, moves, etd.occupy, callback);
 			}
 		);
 
@@ -189,7 +195,7 @@ FINLINE void _GetMoves(const BoardState& board, uint64_t checkersAmount, CALLBAC
 				if (pinnedPieces[i])
 					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
-				AddMovesFromBB<PT_KNIGHT>(i, moves, callback);
+				AddMovesFromBB<PT_KNIGHT>(i, moves, etd.occupy, callback);
 			}
 		);
 
@@ -202,7 +208,7 @@ FINLINE void _GetMoves(const BoardState& board, uint64_t checkersAmount, CALLBAC
 				if (pinnedPieces[i])
 					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
-				AddMovesFromBB<PT_BISHOP>(i, moves, callback);
+				AddMovesFromBB<PT_BISHOP>(i, moves, etd.occupy, callback);
 			}
 		);
 
@@ -215,7 +221,7 @@ FINLINE void _GetMoves(const BoardState& board, uint64_t checkersAmount, CALLBAC
 				if (pinnedPieces[i])
 					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
-				AddMovesFromBB<PT_QUEEN>(i, moves, callback);
+				AddMovesFromBB<PT_QUEEN>(i, moves, etd.occupy, callback);
 			}
 		);
 	}
@@ -236,7 +242,8 @@ FINLINE void _GetMoves(const BoardState& board, uint64_t checkersAmount, CALLBAC
 								td.kingPos,
 								td.kingPos + (i ? 2 : -2),
 								PT_KING,
-								PT_KING
+								PT_KING,
+								false
 							};
 							callback(castleMove);
 						}
@@ -245,7 +252,7 @@ FINLINE void _GetMoves(const BoardState& board, uint64_t checkersAmount, CALLBAC
 			}
 		}
 
-		AddMovesFromBB<PT_KING>(td.kingPos, moves, callback);
+		AddMovesFromBB<PT_KING>(td.kingPos, moves, etd.occupy, callback);
 	}
 }
 

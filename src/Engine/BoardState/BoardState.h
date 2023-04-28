@@ -21,6 +21,8 @@ struct BoardState {
 		// Usually set to the piece we moved, except when promoting pawns
 		uint8_t resultPiece;
 
+		bool isCapture = false;
+
 		Move() = default;
 
 		FINLINE bool IsValid() const {
