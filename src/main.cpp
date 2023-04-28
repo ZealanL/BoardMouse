@@ -20,6 +20,9 @@ int main() {
 
 	UCI::Init();
 
+	LOG("Ready!");
+	LOG("============================");
+
 	string line;
 	while (std::getline(std::cin, line)) {
 		vector<string> parts = SPLIT_STR(line, " ");
