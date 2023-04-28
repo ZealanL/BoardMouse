@@ -9,7 +9,7 @@ void FEN::Parse(vector<string> tokens, BoardState& boardStateOut) {
 		boardStateOut.teamData[i].canCastle_K = boardStateOut.teamData[i].canCastle_Q = false;
 
 	if (tokens.empty())
-		throw "FEN string is empty";
+		THROW("FEN string is empty");
 
 	string boardStateStr = tokens[0];
 
@@ -20,7 +20,7 @@ void FEN::Parse(vector<string> tokens, BoardState& boardStateOut) {
 	for (char c : boardStateStr) {
 		if (isalpha(c)) {
 			if (POSI(x, y) >= BD_SQUARE_AMOUNT)
-				throw "Too many pieces on rank";
+				THROW("Too many pieces on rank");
 
 			char lowerC = tolower(c);
 			uint8_t team = (c == lowerC) ? TEAM_BLACK : TEAM_WHITE;
@@ -35,13 +35,13 @@ void FEN::Parse(vector<string> tokens, BoardState& boardStateOut) {
 			}
 
 			if (pieceType == PT_AMOUNT)
-				throw STR("Invalid piece type character: '" << toupper(c) << "'");
+				THROW("Invalid piece type character: '" << toupper(c) << "'");
 
 			int idx = POSI(x, y);
 
 			if (pieceType == PT_KING) {
 				if (teamData.pieceSets[PT_KING] != 0)
-					throw STR("Color " << TEAM_NAMES[team] << " has multiple kings");
+					THROW("Color " << TEAM_NAMES[team] << " has multiple kings");
 
 				teamData.kingPos = idx;
 			}
@@ -54,13 +54,13 @@ void FEN::Parse(vector<string> tokens, BoardState& boardStateOut) {
 			int num = c - '0';
 			x += num;
 			if (x > BD_SIZE)
-				throw "Too many pieces/pawns in rank";
+				THROW("Too many pieces/pawns in rank");
 		} else if (c == '/') {
 			if (y <= 0)
-				throw "Too many rank seperators";
+				THROW("Too many rank seperators");
 
 			if (x != BD_SIZE)
-				throw "Rank seperator doesn't happen at end of rank";
+				THROW("Rank seperator doesn't happen at end of rank");
 
 			y--;
 			x = 0;
@@ -69,13 +69,13 @@ void FEN::Parse(vector<string> tokens, BoardState& boardStateOut) {
 
 	for (int i = 0; i < TEAM_AMOUNT; i++)
 		if (boardStateOut.teamData[i].pieceSets[PT_KING] == 0)
-			throw STR("Color " << TEAM_NAMES[i] << " has no king");
+			THROW("Color " << TEAM_NAMES[i] << " has no king");
 
 	// Read turn
 	if (tokens.size() >= 2) {
 		string whosTurnToken = tokens[1];
 		if (whosTurnToken.size() != 1)
-			throw STR("Invalid turn character token (bad length of " << whosTurnToken.size() << ")");
+			THROW("Invalid turn character token (bad length of " << whosTurnToken.size() << ")");
 
 		char teamChar = tolower(whosTurnToken[0]);
 
@@ -84,7 +84,7 @@ void FEN::Parse(vector<string> tokens, BoardState& boardStateOut) {
 		} else if (teamChar == 'b') {
 			boardStateOut.turnTeam = TEAM_BLACK;
 		} else {
-			throw STR("Invalid turn character: '" << teamChar << "', should be 'w' or 'b'");
+			THROW("Invalid turn character: '" << teamChar << "', should be 'w' or 'b'");
 		}
 
 	}
@@ -102,16 +102,16 @@ void FEN::Parse(vector<string> tokens, BoardState& boardStateOut) {
 				auto& teamData = boardStateOut.teamData[team];
 				if (upperC == 'K') {
 					if (teamData.canCastle_K)
-						throw STR("Repeated castling rights character: '" << c << '"');
+						THROW("Repeated castling rights character: '" << c << '"');
 
 					teamData.canCastle_K = true;
 				} else if (upperC == 'Q') {
 					if (teamData.canCastle_Q)
-						throw STR("Repeated castling rights character: '" << c << '"');
+						THROW("Repeated castling rights character: '" << c << '"');
 
 					teamData.canCastle_Q = true;
 				} else {
-					throw STR("Invalid castling rights character: '" << c << "'");
+					THROW("Invalid castling rights character: '" << c << "'");
 				}
 			}
 		}
@@ -125,13 +125,13 @@ void FEN::Parse(vector<string> tokens, BoardState& boardStateOut) {
 			// None
 		} else {
 			if (enPassantToken.size() != 2)
-				throw STR("Invalid en passant coordinates: \"" << enPassantToken << "\"");
+				THROW("Invalid en passant coordinates: \"" << enPassantToken << "\"");
 
 			char letter = enPassantToken[0];
 			char number = enPassantToken[1];
 			Pos enPassantToPos = ANI(enPassantToken[0], enPassantToken[1]);
 			if (enPassantToPos >= BD_SQUARE_AMOUNT)
-				throw STR("Out-of-bounds en passant coordinate: \"" << enPassantToken << "\"");
+				THROW("Out-of-bounds en passant coordinate: \"" << enPassantToken << "\"");
 
 			boardStateOut.enPassantToMask.Set(enPassantToPos, true);
 
@@ -147,11 +147,11 @@ void FEN::Parse(vector<string> tokens, BoardState& boardStateOut) {
 		try {
 			boardStateOut.halfMovesSincePawnOrCapture = std::stoi(halfMoveCountStr);
 		} catch (std::exception& e) {
-			throw "Invalid half-move count (failed to parse number)";
+			THROW("Invalid half-move count (failed to parse number)");
 		}
 
 		if (boardStateOut.halfMovesSincePawnOrCapture < 0)
-			throw "Invalid half-move count (negative number)";
+			THROW("Invalid half-move count (negative number)");
 	}
 
 	// Read move number
@@ -160,10 +160,10 @@ void FEN::Parse(vector<string> tokens, BoardState& boardStateOut) {
 		try {
 			boardStateOut.moveNum = std::stoi(moveNumberStr);
 		} catch (std::exception& e) {
-			throw "Invalid move number (failed to parse number)";
+			THROW("Invalid move number (failed to parse number)");
 		}
 		if (boardStateOut.moveNum <= 0)
-			throw "Invalid move number (number is non-positive)";
+			THROW("Invalid move number (number is non-positive)");
 	}
 
 	// TODO: Make sure rooks are present if castling is allowed

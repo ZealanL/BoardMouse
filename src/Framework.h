@@ -83,6 +83,8 @@ typedef uint8_t byte;
 #define SASSERT static_assert
 #pragma endregion
 
+#define THROW(s) throw std::runtime_error(STR(s))
+
 #define FINLINE inline
 
 // Make sure we are 64-bit
