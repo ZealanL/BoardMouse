@@ -8,6 +8,7 @@ std::condition_variable engineUpdateConVar;
 std::mutex engineUpdateWaitMutex;
 
 struct {
+	bool isPerft = false;
 	uint16_t depth = MAX_SEARCH_DEPTH;
 	size_t maxTimeMS = -1;
 } searchParams;
@@ -19,16 +20,21 @@ void EngineSearchLoop() {
 		std::unique_lock<std::mutex> updateMutexLock = std::unique_lock<std::mutex>(engineUpdateWaitMutex);
 		engineUpdateConVar.wait(updateMutexLock);
 		
-		uint8_t searchResult = Engine::DoSearch(searchParams.depth, searchParams.maxTimeMS);
-		if (searchResult != Engine::SEARCH_COULDNT_START) {
-			vector<BoardState::Move> moves = Engine::GetCurrentPV();
-			ASSERT(!moves.empty());
-			LOG("bestmove " << moves.front());
+		if (searchParams.isPerft) {
+			Engine::DoPerftSearch(searchParams.depth);
+		} else {
+			uint8_t searchResult = Engine::DoSearch(searchParams.depth, searchParams.maxTimeMS);
+			if (searchResult != Engine::SEARCH_COULDNT_START) {
+				vector<BoardState::Move> moves = Engine::GetCurrentPV();
+				ASSERT(!moves.empty());
+				LOG("bestmove " << moves.front());
+			}
 		}
 	}
 }
 
-void StartEngine(uint16_t depth, size_t maxTimeMS) {
+void StartEngine(bool isPerft, uint16_t depth, size_t maxTimeMS) {
+	searchParams.isPerft = isPerft;
 	searchParams.depth = CLAMP(depth, 1, MAX_SEARCH_DEPTH);
 	searchParams.maxTimeMS = maxTimeMS = MAX(maxTimeMS, 0);
 	engineUpdateConVar.notify_one();
@@ -135,18 +141,23 @@ bool UCI::ProcessCommand(vector<string> parts) {
 			}
 		}
 
+		bool isPerft = false;
 		for (const pair<string, int64_t>& arg : argMap) {
 			if (arg.first == "depth") {
 				depth = arg.second;
 			} else if (arg.first == "movetime") {
 				maxTimeMS = arg.second;
+			} else if (arg.first == "perft") {
+				isPerft = true;
+				depth = arg.second;
+				break; // Don't parse any other arguments
 			}
 		}
 
 		// TODO: Support the variety of other arguments
 
 		StopEngine();
-		StartEngine(depth, maxTimeMS);
+		StartEngine(isPerft, depth, maxTimeMS);
 		return true;
 
 	} else if (firstPart == "d") {

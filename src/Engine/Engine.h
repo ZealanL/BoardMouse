@@ -65,5 +65,6 @@ namespace Engine {
 	};
 
 	uint8_t DoSearch(uint16_t depth, size_t maxTimeMS = -1);
+	uint8_t DoPerftSearch(uint16_t depth);
 	void StopSearch();
 }

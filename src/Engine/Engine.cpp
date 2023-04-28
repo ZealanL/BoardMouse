@@ -311,3 +311,86 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 
 	return SEARCH_COMPLETED;
 }
+
+void PerftSearchRecursive(BoardState& boardState, uint16_t depth, uint64_t& moveCount) {
+
+	if (g_StopSearch)
+		return;
+
+	if (depth > 1) {
+		MoveGen::GetMoves(boardState,
+			[&](const BoardState::Move& move) {
+				BoardState boardCopy = boardState;
+				boardCopy.ExecuteMove(move);
+				PerftSearchRecursive(boardCopy, depth - 1, moveCount);
+			}
+		);
+	} else {
+		MoveGen::CountMoves(boardState, moveCount);
+	}
+}
+
+uint8_t Engine::DoPerftSearch(uint16_t depth) {
+	ASSERT(depth > 0);
+
+	uint8_t previousState = STATE_READY;
+
+	BoardState initialBoardState = GetPosition();
+	infoMutex.lock();
+	{
+		if (g_CurState != STATE_READY) {
+			// We aren't able to search right now
+			infoMutex.unlock();
+			return SEARCH_COULDNT_START;
+		} else {
+			previousState = g_CurState;
+			g_CurState = STATE_SEARCHING;
+		}
+
+		g_CurPVLength = 0;
+	}
+	infoMutex.unlock();
+
+	size_t startTimeMS = CUR_MS();
+
+	uint64_t totalMoves = 0;
+
+	MoveGen::GetMoves(initialBoardState,
+		[&](const BoardState::Move& move) {
+			if (depth > 1) {
+				BoardState boardCopy = initialBoardState;
+				boardCopy.ExecuteMove(move);
+
+				uint64_t totalSubMoves = 0;
+				PerftSearchRecursive(boardCopy, depth - 1, totalSubMoves);
+				LOG(move << ": " << totalSubMoves);
+				totalMoves += totalSubMoves;
+			} else {
+				LOG(move << ": 1");
+				totalMoves++;
+			}
+		}
+	);
+
+	uint64_t timeElapsed = CUR_MS() - startTimeMS;
+
+	LOG((totalMoves > 0 ? "\n" : "") << "Nodes searched: " << totalMoves);
+	string timeString;
+	if (timeElapsed < 10000) {
+		timeString = STR(timeElapsed << "ms");
+	} else {
+		timeString = STR(std::setprecision(4) << (timeElapsed / 1000.f) << "s");
+	}
+	LOG("Time: " << timeString);
+	uint64_t nps = totalMoves * 1000 / timeElapsed;
+	float mnps = nps / (1000.f * 1000.f);
+	LOG("Nodes per second: " << (totalMoves * 1000 / timeElapsed) << " (" << std::setprecision(3) << mnps << "mnps)");
+
+	infoMutex.lock();
+	{
+		g_CurState = previousState;
+	}
+	infoMutex.unlock();
+
+	return SEARCH_COMPLETED;
+}
