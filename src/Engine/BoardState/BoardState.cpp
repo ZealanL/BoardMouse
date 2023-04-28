@@ -130,7 +130,14 @@ void BoardState::ExecuteMove(Move move) {
 		toMaskInv = ~toMask;
 
 #ifdef _DEBUG
+	bool isBad = false;
 	if (!td.occupy[move.from] || td.occupy[move.to]) {
+		isBad = true;
+	} else if (etd.kingPos == move.to) {
+		isBad = true;
+	}
+
+	if (isBad) {
 		ERR_CLOSE("Tried to execute invalid move " << move << " for team " << TEAM_NAMES[turnTeam] << " on BoardState " << *this);
 	}
 #endif
