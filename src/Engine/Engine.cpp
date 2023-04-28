@@ -213,7 +213,8 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value min, Value max, uint16
 				entry->depth = depth;
 				entry->eval = (TEAM == TEAM_WHITE) ? min : max;
 
-				g_CurPV[pvIndex] = moves[bestMoveIndex];
+				if (extendedDepth == g_Settings.maxExtendedDepth)
+					g_CurPV[pvIndex] = moves[bestMoveIndex];
 			}
 		}
 	}
