@@ -63,8 +63,8 @@ FINLINE void AddMovesFromBB(Pos from, BitBoard toBB, BitBoard enemyOccupy, CALLB
 	});
 }
 
-template <uint8_t TEAM, bool EN_PASSANT_AVAILABLE, bool ONLY_KING_MOVES, typename CALLBACK>
-FINLINE void _GetMoves(const BoardState& board, uint64_t checkersAmount, CALLBACK callback) {
+template <uint8_t TEAM, bool EN_PASSANT_AVAILABLE, bool ONLY_KING_MOVES, bool JUST_COUNT, typename CALLBACK>
+FINLINE void _GetMoves(const BoardState& board, uint64_t checkersAmount, CALLBACK callbackOrCount) {
 	auto& td = board.teamData[TEAM];
 	auto& etd = board.teamData[!TEAM];
 
@@ -166,12 +166,17 @@ FINLINE void _GetMoves(const BoardState& board, uint64_t checkersAmount, CALLBAC
 				if (pinnedPieces[i])
 					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
-				BitBoard captureBB = etd.occupy;
+				if constexpr (JUST_COUNT) {
+					callbackOrCount += moves.BitCount();
+				} else {
+					BitBoard captureBB = etd.occupy;
 
-				if constexpr (EN_PASSANT_AVAILABLE) {
-					captureBB |= board.enPassantToMask;
+					if constexpr (EN_PASSANT_AVAILABLE) {
+						captureBB |= board.enPassantToMask;
+					}
+
+					AddMovesFromBB<PT_PAWN>(i, moves, captureBB, callbackOrCount);
 				}
-				AddMovesFromBB<PT_PAWN>(i, moves, captureBB, callback);
 			}
 		);
 
@@ -184,7 +189,11 @@ FINLINE void _GetMoves(const BoardState& board, uint64_t checkersAmount, CALLBAC
 				if (pinnedPieces[i])
 					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
-				AddMovesFromBB<PT_ROOK>(i, moves, etd.occupy, callback);
+				if constexpr (JUST_COUNT) {
+					callbackOrCount += moves.BitCount();
+				} else {
+					AddMovesFromBB<PT_ROOK>(i, moves, etd.occupy, callbackOrCount);
+				}
 			}
 		);
 
@@ -195,7 +204,11 @@ FINLINE void _GetMoves(const BoardState& board, uint64_t checkersAmount, CALLBAC
 				if (pinnedPieces[i])
 					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
-				AddMovesFromBB<PT_KNIGHT>(i, moves, etd.occupy, callback);
+				if constexpr (JUST_COUNT) {
+					callbackOrCount += moves.BitCount();
+				} else {
+					AddMovesFromBB<PT_KNIGHT>(i, moves, etd.occupy, callbackOrCount);
+				}
 			}
 		);
 
@@ -208,7 +221,11 @@ FINLINE void _GetMoves(const BoardState& board, uint64_t checkersAmount, CALLBAC
 				if (pinnedPieces[i])
 					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
-				AddMovesFromBB<PT_BISHOP>(i, moves, etd.occupy, callback);
+				if constexpr (JUST_COUNT) {
+					callbackOrCount += moves.BitCount();
+				} else {
+					AddMovesFromBB<PT_BISHOP>(i, moves, etd.occupy, callbackOrCount);
+				}
 			}
 		);
 
@@ -221,7 +238,11 @@ FINLINE void _GetMoves(const BoardState& board, uint64_t checkersAmount, CALLBAC
 				if (pinnedPieces[i])
 					moves &= LookupGen::GetLineMask(i, td.kingPos);
 
-				AddMovesFromBB<PT_QUEEN>(i, moves, etd.occupy, callback);
+				if constexpr (JUST_COUNT) {
+					callbackOrCount += moves.BitCount();
+				} else {
+					AddMovesFromBB<PT_QUEEN>(i, moves, etd.occupy, callbackOrCount);
+				}
 			}
 		);
 	}
@@ -238,32 +259,40 @@ FINLINE void _GetMoves(const BoardState& board, uint64_t checkersAmount, CALLBAC
 					if ((combinedOccupy & castleEmptyMask) == 0) {
 						BitBoard castleSafetyMask = CASTLE_SAFETY_MASKS[TEAM][i];
 						if ((castleSafetyMask & etd.attack) == 0) {
-							BoardState::Move castleMove = {
-								td.kingPos,
-								td.kingPos + (i ? 2 : -2),
-								PT_KING,
-								PT_KING,
-								false
-							};
-							callback(castleMove);
+							if constexpr (JUST_COUNT) {
+								callbackOrCount++;
+							} else {
+								BoardState::Move castleMove = {
+									td.kingPos,
+									td.kingPos + (i ? 2 : -2),
+									PT_KING,
+									PT_KING,
+									false
+								};
+								callbackOrCount(castleMove);
+							}
 						}
 					}
 				}
 			}
 		}
 
-		AddMovesFromBB<PT_KING>(td.kingPos, moves, etd.occupy, callback);
+		if constexpr (JUST_COUNT) {
+			callbackOrCount += moves.BitCount();
+		} else {
+			AddMovesFromBB<PT_KING>(td.kingPos, moves, etd.occupy, callbackOrCount);
+		}
 	}
 }
 
-#define KM_G(team, enPassant) \
+#define KM_G(team, enPassant, justCount) \
 	if (onlyKingMoves) \
-		_GetMoves<team, enPassant, 1>(board, checkersAmount, callback); \
+		_GetMoves<team, enPassant, 1, JUST_COUNT>(board, checkersAmount, callbackOrCount); \
 	else \
-		_GetMoves<team, enPassant, 0>(board, checkersAmount, callback);
+		_GetMoves<team, enPassant, 0, JUST_COUNT>(board, checkersAmount, callbackOrCount);
 
-template <typename T>
-void _GetMovesWrapper(const BoardState& board, T callback) {
+template <bool JUST_COUNT, typename T>
+void _GetMovesWrapper(const BoardState& board, T callbackOrCount) {
 	int checkersAmount = board.teamData[!board.turnTeam].checkers.BitCount();
 	bool onlyKingMoves = checkersAmount > 1;
 	if (board.turnTeam == TEAM_WHITE) {
@@ -282,9 +311,13 @@ void _GetMovesWrapper(const BoardState& board, T callback) {
 }
 
 void MoveGen::GetMoves(const BoardState& board, vector<BoardState::Move>& movesOut) {
-	_GetMovesWrapper(board, [&](const BoardState::Move& move) { movesOut.push_back(move); });
+	_GetMovesWrapper<false>(board, [&](const BoardState::Move& move) { movesOut.push_back(move); });
 }
 
 void MoveGen::GetMoves(const BoardState& board, MoveCallbackFn callback) {
-	_GetMovesWrapper(board, callback);
+	_GetMovesWrapper<false>(board, callback);
+}
+
+void MoveGen::CountMoves(const BoardState& board, uint64_t& moveCount) {
+	_GetMovesWrapper<true>(board, std::ref(moveCount));
 }
