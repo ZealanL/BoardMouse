@@ -87,4 +87,7 @@ struct BitBoard {
 SASSERT(sizeof(BitBoard) == sizeof(uint64_t));
 
 // BitBoard mask for all squares along the edges of the board
-#define BB_MASK_BORDER BitBoard(0xFF818181818181FF)
+#define BB_MASK_BORDER ((uint64_t)0xFF818181818181FF)
+
+// Bitboard mask for a rank
+#define BB_MASK_RANK(index) ((uint64_t)0xFF << (uint64_t)(index * 8))
