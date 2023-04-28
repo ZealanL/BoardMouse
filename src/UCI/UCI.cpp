@@ -147,6 +147,10 @@ bool UCI::ProcessCommand(vector<string> parts) {
 
 		StopEngine();
 		StartEngine(depth, maxTimeMS);
+		return true;
+
+	} else if (firstPart == "d") {
+		LOG(Engine::GetPosition());
 	} else {
 		// TODO: Support more commands
 	}
