@@ -254,7 +254,7 @@ void GeneratePieceValues() {
 		for (uint8_t pieceType = 0; pieceType < PT_AMOUNT; pieceType++) {
 			for (Pos pos = 0; pos < BD_SQUARE_AMOUNT; pos++) {
 				// TODO: Make extra dimension for endgames
-				float val = PieceValue::CalcPieceValue(pieceType, team, pos, false);
+				float val = PieceValue::CalcPieceSquareValue(pieceType, team, pos, false);
 				LookupGen::pieceValues[team][pieceType][pos] = val;
 			}
 		}

@@ -8,5 +8,5 @@ typedef int64_t Value;
 #define CHECKMATE_VALUE (1000 * 1000)
 
 namespace PieceValue {
-	Value CalcPieceValue(uint8_t pieceType, uint8_t team, Pos pos, bool isEndGame);
+	Value CalcPieceSquareValue(uint8_t pieceType, uint8_t team, Pos pos, bool isEndGame);
 }

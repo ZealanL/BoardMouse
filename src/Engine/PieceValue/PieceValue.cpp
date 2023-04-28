@@ -1,6 +1,6 @@
 #include "PieceValue.h"
 
-Value PieceValue::CalcPieceValue(uint8_t pieceType, uint8_t team, Pos pos, bool isEndGame) {
+Value PieceValue::CalcPieceSquareValue(uint8_t pieceType, uint8_t team, Pos pos, bool isEndGame) {
 	uint8_t 
 		x = pos.X(),
 		y = pos.Y();
