@@ -383,10 +383,16 @@ uint8_t Engine::DoPerftSearch(uint16_t depth) {
 		timeString = STR(std::setprecision(4) << (timeElapsed / 1000.f) << "s");
 	}
 	LOG("Time: " << timeString);
-	uint64_t nps = totalMoves * 1000 / timeElapsed;
-	float mnps = nps / (1000.f * 1000.f);
-	LOG("Nodes per second: " << (totalMoves * 1000 / timeElapsed) << " (" << std::setprecision(3) << mnps << "mnps)");
 
+	constexpr uint64_t MIN_TIME_ELAPSED = 500;
+
+	if (timeElapsed >= MIN_TIME_ELAPSED) {
+		uint64_t nps = totalMoves * 1000 / timeElapsed;
+		float mnps = nps / (1000.f * 1000.f);
+		LOG("Nodes per second: " << (totalMoves * 1000 / timeElapsed) << " (" << std::setprecision(3) << mnps << "mnps)");
+	} else {
+		LOG("Nodes per second: insufficient sample size (min = " << MIN_TIME_ELAPSED << "ms)");
+	}
 	infoMutex.lock();
 	{
 		g_CurState = previousState;
