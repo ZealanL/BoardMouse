@@ -191,7 +191,7 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value min, Value max, uint16
 					if (depth == 1 && (boardCopy.teamData[TEAM].checkers || move.isCapture) && extendedDepth > 0) {
 						// This is a check or capture, and we have extended depth left, so we need to keep searching deeper
 						nextDepth = depth;
-						nextExtendedDepth = nextExtendedDepth - 1;
+						nextExtendedDepth = extendedDepth - 1;
 					} else {
 						nextDepth = depth - 1;
 						nextExtendedDepth = extendedDepth;
