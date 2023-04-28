@@ -36,11 +36,18 @@ namespace Engine {
 		Stats() = default;
 	};
 
+	struct Settings {
+		// Maximum extra plies to search if reached a capture or check at depth 0
+		uint16_t maxExtendedDepth = 3;
+	};
+
 	enum {
 		STATE_INITIALIZING,
 		STATE_READY,
 		STATE_SEARCHING
 	};
+
+	Settings& GetSettings();
 
 	uint8_t GetState();
 	void SetState(uint8_t state);

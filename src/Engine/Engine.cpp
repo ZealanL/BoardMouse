@@ -14,6 +14,13 @@ std::mutex infoMutex = std::mutex();
 // NOTE: infoMutex does not apply to this, as this variable needs to be checked very frequently
 bool g_StopSearch = false;
 
+// NOTE: No mutex for this
+Engine::Settings g_Settings;
+
+Engine::Settings& Engine::GetSettings() {
+	return g_Settings;
+}
+
 uint8_t Engine::GetState() {
 	infoMutex.lock();
 	uint8_t result = g_CurState;
@@ -96,7 +103,7 @@ FINLINE MinMaxResult UpdateMinMax(Value eval, Value& min, Value& max) {
 #define MOVE_RESERVE_AMOUNT 60
 
 template <uint8_t TEAM>
-Value MinMaxSearchRecursive(BoardState& boardState, Value min, Value max, uint16_t depth, uint16_t pvIndex) {
+Value MinMaxSearchRecursive(BoardState& boardState, Value min, Value max, uint16_t depth, uint16_t extendedDepth, uint16_t pvIndex) {
 
 	if (g_StopSearch)
 		return (TEAM == TEAM_WHITE) ? min : max;
@@ -179,7 +186,18 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value min, Value max, uint16
 
 					BoardState boardCopy = boardState;
 					boardCopy.ExecuteMove(move);
-					Value eval = MinMaxSearchRecursive<!TEAM>(boardCopy, min, max, depth - 1, pvIndex + 1);
+
+					uint16_t nextDepth, nextExtendedDepth;
+					if (depth == 1 && (boardCopy.teamData[TEAM].checkers || move.isCapture) && extendedDepth > 0) {
+						// This is a check or capture, and we have extended depth left, so we need to keep searching deeper
+						nextDepth = depth;
+						nextExtendedDepth = nextExtendedDepth - 1;
+					} else {
+						nextDepth = depth - 1;
+						nextExtendedDepth = extendedDepth;
+					}
+
+					Value eval = MinMaxSearchRecursive<!TEAM>(boardCopy, min, max, nextDepth, nextExtendedDepth, pvIndex + 1);
 
 					MinMaxResult minMaxResult = UpdateMinMax<TEAM>(eval, min, max);
 					if (minMaxResult == MinMaxResult::NEW_BEST) {
@@ -250,12 +268,18 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 			g_Stats = Stats();
 			infoMutex.unlock();
 
-			Value bestEval;
-			if (isWhite) {
-				bestEval = MinMaxSearchRecursive<TEAM_WHITE>(initialBoardState, -CHECKMATE_VALUE, CHECKMATE_VALUE, curDepth, 0);
-			} else {
-				bestEval = MinMaxSearchRecursive<TEAM_BLACK>(initialBoardState, -CHECKMATE_VALUE, CHECKMATE_VALUE, curDepth, 0);
-			}
+			const auto fnMinMaxSearch = [](uint8_t team, auto&&... args) -> Value {
+				if (team == TEAM_WHITE) {
+					return MinMaxSearchRecursive<TEAM_WHITE>(args...);
+				} else {
+					return MinMaxSearchRecursive<TEAM_BLACK>(args...);
+				}
+			};
+
+			Value bestEval = fnMinMaxSearch(
+				isWhite ? TEAM_WHITE : TEAM_BLACK,
+				initialBoardState, -CHECKMATE_VALUE, CHECKMATE_VALUE, curDepth, g_Settings.maxExtendedDepth, 0
+			);
 
 			{ // Print UCI info
 				// TODO: Move this all to UCI.cpp, use a callback function to trigger print
