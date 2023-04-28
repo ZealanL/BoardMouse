@@ -110,46 +110,44 @@ FINLINE void _GetMoves(const BoardState& board, uint64_t checkersAmount, CALLBAC
 
 				if constexpr (EN_PASSANT_AVAILABLE) {
 					if (baseAttacks & board.enPassantToMask) {
-						if (!pinnedPieces[board.enPassantPawnPos]) {
-							if (td.kingPos.Y() == moveFromY) {
-								// We need to make sure this en passant capture wont reveal a check
+						bool isLegal = true;
 
-								int enemyPiecesOnRankAmount = BitBoard(LookupGen::GetRankMask(i) & etd.occupy).BitCount();
+						if (pinnedPieces[board.enPassantPawnPos]) {
+							// If the target pawn is pinned, make sure capturing it blocks the pin
+							BitBoard enemyPawnPinMask = LookupGen::GetLineMask(board.enPassantPawnPos, td.kingPos);
+							isLegal = board.enPassantToMask & enemyPawnPinMask;
+						}
 
-								if (enemyPiecesOnRankAmount > 1) {
-									int kingPosX = td.kingPos.X();
-									int moveFromX = i.X();
-									int moveToX = board.enPassantPawnPos.X();
-									int potentialRevealedDirX = (moveFromX < kingPosX) ? 1 : -1;
-									int stopX = (potentialRevealedDirX > 0) ? BD_SIZE : -1;
-									bool wouldRevealKingAttack = false;
+						if (td.kingPos.Y() == moveFromY && isLegal) {
+							// We need to make sure this en passant capture wont reveal a sideways check
 
-									// TODO: Make more efficient
-									for (int x = kingPosX - potentialRevealedDirX; x != stopX; x -= potentialRevealedDirX) {
-										if (x == moveFromX || x == moveToX)
-											continue;
+							int enemyPiecesOnRankAmount = BitBoard(LookupGen::GetRankMask(i) & etd.occupy).BitCount();
 
-										Pos pos = Pos(x, moveFromY);
-										if (combinedOccupy[pos]) {
-											if (etd.occupy[pos]) {
-												wouldRevealKingAttack = etd.pieceSets[PT_ROOK][pos] || etd.pieceSets[PT_QUEEN][pos];
-											}
+							if (enemyPiecesOnRankAmount > 1) {
+								int kingPosX = td.kingPos.X();
+								int moveFromX = i.X();
+								int moveToX = board.enPassantPawnPos.X();
+								int potentialRevealedDirX = (moveFromX < kingPosX) ? 1 : -1;
+								int stopX = (potentialRevealedDirX > 0) ? BD_SIZE : -1;
 
-											break;
+								// TODO: Make more efficient
+								for (int x = kingPosX - potentialRevealedDirX; x != stopX; x -= potentialRevealedDirX) {
+									if (x == moveFromX || x == moveToX)
+										continue;
+
+									Pos pos = Pos(x, moveFromY);
+									if (combinedOccupy[pos]) {
+										if (etd.occupy[pos]) {
+											isLegal = !(etd.pieceSets[PT_ROOK][pos] || etd.pieceSets[PT_QUEEN][pos]);
 										}
+										break;
 									}
-
-									if (!wouldRevealKingAttack) {
-										attacks |= board.enPassantToMask;
-									}
-
-								} else {
-									attacks |= board.enPassantToMask;
 								}
-
-							} else {
-								attacks |= board.enPassantToMask;
 							}
+						}
+						
+						if (isLegal) {
+							attacks |= board.enPassantToMask;
 						}
 					}
 				}
