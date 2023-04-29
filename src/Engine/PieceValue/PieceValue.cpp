@@ -181,6 +181,6 @@ Value PieceValue::CalcPieceSquareValue(uint8_t pieceType, uint8_t team, Pos pos,
 
 	constexpr float BONUS_SCALE = 1.0f;
 
-	int mirrorIndex = mirrorX + (y * BD_SIZE / 2);
+	int mirrorIndex = mirrorX + ((7 - y) * BD_SIZE / 2);
 	return PIECE_BASE_VALUES[pieceType] + (PIECE_BONUS[pieceType][isEndGame][mirrorIndex] * BONUS_SCALE);
 }
