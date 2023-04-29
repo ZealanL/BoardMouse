@@ -165,7 +165,7 @@ void BoardState::ExecuteMove(Move move) {
 
 #ifdef UPDATE_VALUES
 			// Remove pawn value
-			td.totalValue -= LookupGen::GetPieceValue(PT_PAWN, enPassantPawnPos, !turnTeam);
+			etd.totalValue -= pieceValues[enPassantPawnPos];
 #endif
 
 		} else if (abs(move.to - move.from) > BD_SIZE + 1) {
