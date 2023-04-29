@@ -191,6 +191,7 @@ void BoardState::ExecuteMove(Move move) {
 			BitBoard rookFlipMask = (1ull << rookFromPos) | (1ull << rookToPos);
 
 			td.pieceSets[PT_ROOK] ^= rookFlipMask;
+			pieceTypes[rookToPos] = PT_ROOK;
 			td.occupy ^= rookFlipMask;
 
 #ifdef UPDATE_VALUES
