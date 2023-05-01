@@ -21,8 +21,9 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 			etd.pinnedPieces |= pinnedPieces;
 	};
 
-	const auto fnUpdateValue = [&](uint8_t pieceType, Pos pos) {
-		Value value = LookupGen::GetPieceValue(PT_PAWN, pos, TEAM);
+	const auto fnUpdateValue = [&](uint8_t pieceType, Pos pos, BitBoard moves = 0) {
+		Value value = LookupGen::GetPieceSquareValue(PT_PAWN, pos, TEAM);
+		value += PieceValue::MOBILITY_BONUS[pieceType] * moves.BitCount();
 		totalValue += value;
 		board.pieceValues[pos] = value;
 	};
@@ -61,7 +62,7 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 			}
 
 			td.attack |= moves;
-			fnUpdateValue(PT_ROOK, i);
+			fnUpdateValue(PT_ROOK, i, moves);
 		}
 	);
 
@@ -75,7 +76,7 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 
 				td.checkers.Set(i, true);
 			}
-			fnUpdateValue(PT_KNIGHT, i);
+			fnUpdateValue(PT_KNIGHT, i, moves);
 		}
 	);
 
@@ -95,7 +96,7 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 			}
 
 			td.attack |= moves;
-			fnUpdateValue(PT_BISHOP, i);
+			fnUpdateValue(PT_BISHOP, i, moves);
 		}
 	);
 
@@ -116,14 +117,14 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 			}
 
 			td.attack |= moves;
-			fnUpdateValue(PT_QUEEN, i);
+			fnUpdateValue(PT_QUEEN, i, moves);
 		}
 	);
 
 	{ // King
-		td.attack |= LookupGen::GetKingMoves(td.kingPos);
-		totalValue += LookupGen::GetPieceValue(PT_KING, td.kingPos, TEAM);
-		fnUpdateValue(PT_KING, td.kingPos);
+		BitBoard moves = LookupGen::GetKingMoves(td.kingPos);
+		td.attack |= moves;
+		fnUpdateValue(PT_KING, td.kingPos, moves);
 	}
 
 	td.totalValue = totalValue;

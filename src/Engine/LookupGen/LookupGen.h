@@ -154,7 +154,7 @@ namespace LookupGen {
 		return rankMasks[pos];
 	}
 
-	FINLINE Value GetPieceValue(uint8_t pieceType, Pos pos, uint8_t team, bool isEndgame = false) {
+	FINLINE Value GetPieceSquareValue(uint8_t pieceType, Pos pos, uint8_t team, bool isEndgame = false) {
 		return pieceValues[team][isEndgame][pieceType][pos];
 	}
 

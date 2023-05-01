@@ -9,4 +9,25 @@ typedef int64_t Value;
 
 namespace PieceValue {
 	Value CalcPieceSquareValue(uint8_t pieceType, uint8_t team, Pos pos, bool isEndGame);
+
+	// Value added for each move available to a given piece
+	constexpr Value MOBILITY_BONUS[PT_AMOUNT] = {
+		// Pawn
+		0, // Moves and attacks are actually different so this isn't useful anyway
+
+		// Rook
+		3,
+
+		// Knight
+		5,
+
+		// Bishop
+		4,
+
+		// Queen
+		2,
+
+		// King
+		1
+	};
 }
