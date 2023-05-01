@@ -128,6 +128,10 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value min, Value max, uint16
 		// No transposition entry for this position is as deep
 
 		if (depth == 0) {
+
+			// Update values for this team
+			boardState.UpdateAttacksPinsValues(TEAM);
+
 			g_Stats.leafNodesEvaluated++;
 			Value 
 				whiteVal = boardState.teamData[TEAM_WHITE].totalValue,
