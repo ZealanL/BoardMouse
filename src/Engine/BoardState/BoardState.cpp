@@ -1,6 +1,14 @@
 #include "BoardState.h"
 #include "../LookupGen/LookupGen.h"
 
+template<uint8_t TEAM, uint8_t pieceType>
+FINLINE void _UpdateValue(BoardState& board, Pos pos, BitBoard moves) {
+	Value value = LookupGen::GetPieceSquareValue(pieceType, pos, TEAM);
+	value += PieceValue::MOBILITY_BONUS[pieceType] * moves.BitCount();
+	board.teamData[TEAM].totalValue += value;
+	board.pieceValues[pos] = value;
+}
+
 template <uint8_t TEAM>
 FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 
@@ -21,13 +29,6 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 			etd.pinnedPieces |= pinnedPieces;
 	};
 
-	const auto fnUpdateValue = [&](uint8_t pieceType, Pos pos, BitBoard moves = 0) {
-		Value value = LookupGen::GetPieceSquareValue(pieceType, pos, TEAM);
-		value += PieceValue::MOBILITY_BONUS[pieceType] * moves.BitCount();
-		totalValue += value;
-		board.pieceValues[pos] = value;
-	};
-
 	BitBoard kingPosMask = etd.pieceSets[PT_KING];
 	
 	td.pieceSets[PT_PAWN].Iterate(
@@ -42,7 +43,7 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 				td.checkers.Set(i, true);
 			}
 
-			fnUpdateValue(PT_PAWN, i);
+			_UpdateValue<TEAM, PT_PAWN>(board, i, moves);
 		}
 	);
 
@@ -50,6 +51,7 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 		[&](uint64_t i) {
 			BitBoard moves, baseMoves;
 			LookupGen::GetRookMoves(i, combinedOccupy & ~kingPosMask, baseMoves, moves);
+			td.attack |= moves;
 
 			if (baseMoves & kingPosMask) {
 				fnUpdatePins(i);
@@ -61,8 +63,7 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 				}
 			}
 
-			td.attack |= moves;
-			fnUpdateValue(PT_ROOK, i, moves);
+			_UpdateValue<TEAM, PT_ROOK>(board, i, moves);
 		}
 	);
 
@@ -70,13 +71,15 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 		[&](uint64_t i) {
 			BitBoard moves = LookupGen::GetKnightMoves(i);
 			td.attack |= moves;
+
 			if (moves & kingPosMask) {
 				if (!td.checkers)
 					td.firstCheckingPiecePos = i;
 
 				td.checkers.Set(i, true);
 			}
-			fnUpdateValue(PT_KNIGHT, i, moves);
+
+			_UpdateValue<TEAM, PT_KNIGHT>(board, i, moves);
 		}
 	);
 
@@ -84,7 +87,7 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 		[&](uint64_t i) {
 			BitBoard moves, baseMoves;
 			LookupGen::GetBishopMoves(i, combinedOccupy & ~kingPosMask, baseMoves, moves);
-
+			td.attack |= moves;
 			if (baseMoves & kingPosMask) {
 				fnUpdatePins(i);
 				if (moves & kingPosMask) {
@@ -95,8 +98,7 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 				}
 			}
 
-			td.attack |= moves;
-			fnUpdateValue(PT_BISHOP, i, moves);
+			_UpdateValue<TEAM, PT_BISHOP>(board, i, moves);
 		}
 	);
 
@@ -104,7 +106,8 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 		[&](uint64_t i) {
 			BitBoard moves, baseMoves;
 			LookupGen::GetQueenMoves(i, combinedOccupy & ~kingPosMask, baseMoves, moves);
-
+			td.attack |= moves;
+			
 			if (baseMoves & kingPosMask) {
 				fnUpdatePins(i);
 
@@ -115,16 +118,15 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 					td.checkers.Set(i, true);
 				}
 			}
-
-			td.attack |= moves;
-			fnUpdateValue(PT_QUEEN, i, moves);
+			
+			_UpdateValue<TEAM, PT_QUEEN>(board, i, moves);
 		}
 	);
 
 	{ // King
 		BitBoard moves = LookupGen::GetKingMoves(td.kingPos);
 		td.attack |= moves;
-		fnUpdateValue(PT_KING, td.kingPos, moves);
+		_UpdateValue<TEAM, PT_KING>(board, td.kingPos, moves);
 	}
 
 	td.totalValue = totalValue;
@@ -284,7 +286,7 @@ void BoardState::ExecuteMove(Move move) {
 	td.occupy &= fromMaskInv;
 	td.occupy |= toMask;
 	td.pieceSets[move.originalPiece].Set(move.from, 0);
-	td.pieceSets[move.resultPiece].Set(move.to, 1);
+	td.pieceSets[move.resultPiece] |= toMask;
 
 #ifdef UPDATE_HASHES
 	hash ^= LookupGen::HashPiece(move.originalPiece, move.from, turnTeam);
