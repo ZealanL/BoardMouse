@@ -174,6 +174,7 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value min, Value max, uint16
 				}
 
 				size_t bestMoveIndex = 0;
+				// NOTE: size_t is unsigned so our loop condition should be (i < size)
 				for (size_t i = moveCount - 1; i < moveCount; i--) {
 					if (lastBestMoveIndex == i) {
 						// We already added this move to the end of the vector
