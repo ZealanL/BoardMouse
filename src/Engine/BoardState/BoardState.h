@@ -104,7 +104,7 @@ struct BoardState {
 	void ExecuteMove(Move move);
 
 	// Update a team's attack and pin masks, within an update mask
-	void UpdateAttacksAndPins(uint8_t team);
+	void UpdateAttacksPinsValues(uint8_t team);
 
 	friend std::ostream& operator <<(std::ostream& stream, const BoardState& boardState);
 };

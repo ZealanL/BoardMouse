@@ -112,7 +112,7 @@ FINLINE void _UpdateAttacksAndPins(BoardState& board) {
 	}
 }
 
-void BoardState::UpdateAttacksAndPins(uint8_t team) {
+void BoardState::UpdateAttacksPinsValues(uint8_t team) {
 	if (team == TEAM_WHITE) {
 		_UpdateAttacksAndPins<TEAM_WHITE>(*this);
 	} else {
@@ -298,7 +298,7 @@ void BoardState::ExecuteMove(Move move) {
 	// Update piece types
 	pieceTypes[move.to] = move.resultPiece;
 
-	UpdateAttacksAndPins(turnTeam);
+	UpdateAttacksPinsValues(turnTeam);
 
 #ifdef UPDATE_HASHES
 	hash ^= LookupGen::turnHashKey;
@@ -313,9 +313,7 @@ void BoardState::ForceUpdateAll() {
 #endif
 
 	for (uint8_t team = 0; team < TEAM_AMOUNT; team++) {
-
-		// Update attacks and pins
-		UpdateAttacksAndPins(team);
+		UpdateAttacksPinsValues(team);
 
 		auto& td = teamData[team];
 #ifdef UPDATE_VALUES
