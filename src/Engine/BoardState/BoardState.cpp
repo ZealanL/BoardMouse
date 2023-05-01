@@ -2,10 +2,12 @@
 #include "../LookupGen/LookupGen.h"
 
 template <uint8_t TEAM>
-FINLINE void _UpdateAttacksAndPins(BoardState& board) {
+FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 
 	auto& td = board.teamData[TEAM];
 	auto& etd = board.teamData[!TEAM];
+	Value totalValue = 0;
+
 	BitBoard combinedOccupy = td.occupy | etd.occupy;
 
 	// Clear attacks/pins/checking pieces
@@ -19,8 +21,14 @@ FINLINE void _UpdateAttacksAndPins(BoardState& board) {
 			etd.pinnedPieces |= pinnedPieces;
 	};
 
-	BitBoard kingPosMask = etd.pieceSets[PT_KING];
+	const auto fnUpdateValue = [&](uint8_t pieceType, Pos pos) {
+		Value value = LookupGen::GetPieceValue(PT_PAWN, pos, TEAM);
+		totalValue += value;
+		board.pieceValues[pos] = value;
+	};
 
+	BitBoard kingPosMask = etd.pieceSets[PT_KING];
+	
 	td.pieceSets[PT_PAWN].Iterate(
 		[&](uint64_t i) {
 			BitBoard moves = LookupGen::GetPawnAttacks(i, TEAM);
@@ -32,6 +40,8 @@ FINLINE void _UpdateAttacksAndPins(BoardState& board) {
 
 				td.checkers.Set(i, true);
 			}
+
+			fnUpdateValue(PT_PAWN, i);
 		}
 	);
 
@@ -51,7 +61,7 @@ FINLINE void _UpdateAttacksAndPins(BoardState& board) {
 			}
 
 			td.attack |= moves;
-			
+			fnUpdateValue(PT_ROOK, i);
 		}
 	);
 
@@ -65,6 +75,7 @@ FINLINE void _UpdateAttacksAndPins(BoardState& board) {
 
 				td.checkers.Set(i, true);
 			}
+			fnUpdateValue(PT_KNIGHT, i);
 		}
 	);
 
@@ -84,6 +95,7 @@ FINLINE void _UpdateAttacksAndPins(BoardState& board) {
 			}
 
 			td.attack |= moves;
+			fnUpdateValue(PT_BISHOP, i);
 		}
 	);
 
@@ -104,19 +116,24 @@ FINLINE void _UpdateAttacksAndPins(BoardState& board) {
 			}
 
 			td.attack |= moves;
+			fnUpdateValue(PT_QUEEN, i);
 		}
 	);
 
 	{ // King
 		td.attack |= LookupGen::GetKingMoves(td.kingPos);
+		totalValue += LookupGen::GetPieceValue(PT_KING, td.kingPos, TEAM);
+		fnUpdateValue(PT_KING, td.kingPos);
 	}
+
+	td.totalValue = totalValue;
 }
 
 void BoardState::UpdateAttacksPinsValues(uint8_t team) {
 	if (team == TEAM_WHITE) {
-		_UpdateAttacksAndPins<TEAM_WHITE>(*this);
+		_UpdateAttacksPinsValues<TEAM_WHITE>(*this);
 	} else {
-		_UpdateAttacksAndPins<TEAM_BLACK>(*this);
+		_UpdateAttacksPinsValues<TEAM_BLACK>(*this);
 	}
 }
 
@@ -194,14 +211,6 @@ void BoardState::ExecuteMove(Move move) {
 			pieceTypes[rookToPos] = PT_ROOK;
 			td.occupy ^= rookFlipMask;
 
-#ifdef UPDATE_VALUES
-			// Update rook value
-			td.totalValue -= pieceValues[rookFromPos];
-			size_t newValue = LookupGen::GetPieceValue(PT_ROOK, rookToPos, turnTeam);
-			pieceValues[move.to] = newValue;
-			td.totalValue += newValue;
-#endif
-
 #ifdef UPDATE_HASHES
 			// Update rook hash
 			hash ^= LookupGen::HashPiece(PT_ROOK, rookFromPos, turnTeam);
@@ -234,14 +243,9 @@ void BoardState::ExecuteMove(Move move) {
 	};
 
 #ifdef UPDATE_VALUES
-	{ // Update piece values
+	{ // Remove enemy piece value on capture
 		if (etd.occupy[move.to])
 			etd.totalValue -= pieceValues[move.to];
-
-		td.totalValue -= pieceValues[move.from];
-		Value newValue = LookupGen::GetPieceValue(move.resultPiece, move.to, turnTeam);
-		pieceValues[move.to] = newValue;
-		td.totalValue += newValue;
 	}
 #endif
 
@@ -316,9 +320,6 @@ void BoardState::ForceUpdateAll() {
 		UpdateAttacksPinsValues(team);
 
 		auto& td = teamData[team];
-#ifdef UPDATE_VALUES
-		td.totalValue = 0;
-#endif
 
 #ifdef _DEBUG
 		for (int i = 0; i < PT_AMOUNT; i++) {
@@ -327,24 +328,20 @@ void BoardState::ForceUpdateAll() {
 		}
 #endif
 
+#ifdef UPDATE_HASHES
 		td.occupy.Iterate(
 			[&](uint64_t i) {
 				for (int j = 0; j < PT_AMOUNT; j++) {
 					if (td.pieceSets[j][i]) {
 						pieceTypes[i] = j;
-#ifdef UPDATE_VALUES
-						Value val = LookupGen::GetPieceValue(j, i, team);
-						pieceValues[i] = val;
-						td.totalValue += val;
-#endif
-#ifdef UPDATE_HASHES
+
 						hash ^= LookupGen::HashPiece(j, i, team);
-#endif
 					}
 				}
 					
 			}
 		);
+#endif
 
 #ifdef UPDATE_HASHES
 		hash ^= LookupGen::HashCastleRights(team, td.canCastle_Q, td.canCastle_K);
