@@ -22,7 +22,7 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 	};
 
 	const auto fnUpdateValue = [&](uint8_t pieceType, Pos pos, BitBoard moves = 0) {
-		Value value = LookupGen::GetPieceSquareValue(PT_PAWN, pos, TEAM);
+		Value value = LookupGen::GetPieceSquareValue(pieceType, pos, TEAM);
 		value += PieceValue::MOBILITY_BONUS[pieceType] * moves.BitCount();
 		totalValue += value;
 		board.pieceValues[pos] = value;
