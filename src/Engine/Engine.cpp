@@ -3,7 +3,7 @@
 #include "Transpos/Transpos.h"
 #include "MoveGen/MoveGen.h"
 
-BoardState::Move g_CurPV[MAX_SEARCH_DEPTH] = {};
+Move g_CurPV[MAX_SEARCH_DEPTH] = {};
 uint16_t g_CurPVLength = 0;
 
 uint8_t g_CurState = Engine::STATE_INITIALIZING;
@@ -41,14 +41,14 @@ BoardState Engine::GetPosition() {
 	return result;
 }
 
-vector<BoardState::Move> Engine::GetCurrentPV() {
+vector<Move> Engine::GetCurrentPV() {
 	infoMutex.lock();
 	if (g_CurPVLength == 0) {
 		infoMutex.unlock();
 		return {};
 	} else {
 		ASSERT(g_CurPVLength <= MAX_SEARCH_DEPTH);
-		auto result = vector<BoardState::Move>(g_CurPV, g_CurPV + g_CurPVLength);
+		auto result = vector<Move>(g_CurPV, g_CurPV + g_CurPVLength);
 		infoMutex.unlock();
 		return result;
 	}
@@ -137,7 +137,7 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value min, Value max, uint16
 			// NOTE: We won't bother setting a transposition entry for a zero-depth evaluation
 		} else {
 			// TODO: Probably should have a list of pre-allocated move vectors, or maybe not store moves at all
-			vector<BoardState::Move> moves;
+			vector<Move> moves;
 			moves.reserve(MOVE_RESERVE_AMOUNT);
 			MoveGen::GetMoves(boardState, moves);
 
@@ -182,7 +182,7 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value min, Value max, uint16
 						continue;
 					}
 
-					BoardState::Move& move = moves[i];
+					Move& move = moves[i];
 
 					BoardState boardCopy = boardState;
 					boardCopy.ExecuteMove(move);
@@ -250,7 +250,7 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 	}
 	infoMutex.unlock();
 
-	vector<BoardState::Move> initialMoves;
+	vector<Move> initialMoves;
 	MoveGen::GetMoves(initialBoardState, initialMoves);
 	bool isWhite = (initialBoardState.turnTeam == TEAM_WHITE);
 
@@ -320,7 +320,7 @@ void PerftSearchRecursive(BoardState& boardState, uint16_t depth, uint64_t& move
 
 	if (depth > 1) {
 		MoveGen::GetMoves(boardState,
-			[&](const BoardState::Move& move) {
+			[&](const Move& move) {
 				BoardState boardCopy = boardState;
 				boardCopy.ExecuteMove(move);
 				PerftSearchRecursive(boardCopy, depth - 1, moveCount);
@@ -357,7 +357,7 @@ uint8_t Engine::DoPerftSearch(uint16_t depth) {
 	uint64_t totalMoves = 0;
 
 	MoveGen::GetMoves(initialBoardState,
-		[&](const BoardState::Move& move) {
+		[&](const Move& move) {
 			if (depth > 1) {
 				BoardState boardCopy = initialBoardState;
 				boardCopy.ExecuteMove(move);

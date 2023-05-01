@@ -25,7 +25,7 @@ void EngineSearchLoop() {
 		} else {
 			uint8_t searchResult = Engine::DoSearch(searchParams.depth, searchParams.maxTimeMS);
 			if (searchResult != Engine::SEARCH_COULDNT_START) {
-				vector<BoardState::Move> moves = Engine::GetCurrentPV();
+				vector<Move> moves = Engine::GetCurrentPV();
 				ASSERT(!moves.empty());
 				LOG("bestmove " << moves.front());
 			}
@@ -99,7 +99,7 @@ bool UCI::ProcessCommand(vector<string> parts) {
 		if (nextIndex < parts.size() && parts[nextIndex] == "moves") {
 			for (int i = nextIndex + 1; i < parts.size(); i++) {
 				string moveStr = parts[i];
-				vector<BoardState::Move> legalMoves;
+				vector<Move> legalMoves;
 				MoveGen::GetMoves(newPosition, legalMoves);
 
 				bool moveFound = false;

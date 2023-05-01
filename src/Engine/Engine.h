@@ -52,7 +52,7 @@ namespace Engine {
 	uint8_t GetState();
 	void SetState(uint8_t state);
 	BoardState GetPosition();
-	vector<BoardState::Move> GetCurrentPV();
+	vector<Move> GetCurrentPV();
 
 	Stats GetStats(); // NOTE: Stats are reset every new search
 

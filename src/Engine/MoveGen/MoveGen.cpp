@@ -56,7 +56,7 @@ FINLINE void AddMovesFromBB(Pos from, BitBoard toBB, BitBoard enemyOccupy, CALLB
 			if constexpr (PIECE_TYPE == PT_PAWN) {
 				if (((BitBoard)PROMOTION_MASK)[i]) {
 					// Promotion
-					BoardState::Move
+					Move
 						pKnight	= { from, i, PT_PAWN, PT_KNIGHT, isCapture },
 						pBishop	= { from, i, PT_PAWN, PT_BISHOP, isCapture },
 						pRook	= { from, i, PT_PAWN, PT_ROOK, isCapture },
@@ -69,7 +69,7 @@ FINLINE void AddMovesFromBB(Pos from, BitBoard toBB, BitBoard enemyOccupy, CALLB
 				}
 			}
 
-			BoardState::Move move = { from, i, PIECE_TYPE, PIECE_TYPE, isCapture };
+			Move move = { from, i, PIECE_TYPE, PIECE_TYPE, isCapture };
 				callbackOrCount(move);
 			});
 	}
@@ -256,7 +256,7 @@ FINLINE void _GetMoves(const BoardState& board, uint64_t checkersAmount, CALLBAC
 							if constexpr (JUST_COUNT) {
 								callbackOrCount++;
 							} else {
-								BoardState::Move castleMove = {
+								Move castleMove = {
 									td.kingPos,
 									td.kingPos + (i ? 2 : -2),
 									PT_KING,
@@ -300,8 +300,8 @@ void _GetMovesWrapper(const BoardState& board, T callbackOrCount) {
 	}
 }
 
-void MoveGen::GetMoves(const BoardState& board, vector<BoardState::Move>& movesOut) {
-	_GetMovesWrapper<false>(board, [&](const BoardState::Move& move) { movesOut.push_back(move); });
+void MoveGen::GetMoves(const BoardState& board, vector<Move>& movesOut) {
+	_GetMovesWrapper<false>(board, [&](const Move& move) { movesOut.push_back(move); });
 }
 
 void MoveGen::GetMoves(const BoardState& board, MoveCallbackFn callback) {

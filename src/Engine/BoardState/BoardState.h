@@ -3,6 +3,7 @@
 #include "../Pos/Pos.h"
 #include "../PieceValue/PieceValue.h"
 #include "../Zobrist/Zobrist.h"
+#include "../Move/Move.h"
 
 #define HALF_MOVE_DRAW_COUNT 100
 
@@ -11,37 +12,6 @@
 
 // Stores all info for the state of a chess game
 struct BoardState {
-
-	struct Move {
-		Pos from, to;
-
-		// Piece we moved
-		uint8_t originalPiece;
-
-		// Usually set to the piece we moved, except when promoting pawns
-		uint8_t resultPiece;
-
-		bool isCapture = false;
-
-		Move() = default;
-
-		FINLINE bool IsValid() const {
-			return from != to;
-		}
-
-		friend std::ostream& operator<<(std::ostream& stream, const Move& move) {
-			if (move.IsValid()) {
-				stream << move.from << move.to;
-				if (move.originalPiece != move.resultPiece)
-					stream << PT_CHARS[move.resultPiece];
-			} else {
-				stream << "[INVALID MOVE]";
-			}
-
-			return stream;
-		}
-	};
-
 	struct TeamData {
 		Pos kingPos; 
 
