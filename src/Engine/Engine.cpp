@@ -99,9 +99,6 @@ FINLINE MinMaxResult UpdateMinMax(Value eval, Value& min, Value& max) {
 	}
 }
 
-// How much to reserve in the move vector
-#define MOVE_RESERVE_AMOUNT 60
-
 template <uint8_t TEAM>
 Value MinMaxSearchRecursive(BoardState& boardState, Value min, Value max, uint16_t depth, uint16_t extendedDepth, uint16_t pvIndex) {
 
@@ -140,12 +137,10 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value min, Value max, uint16
 
 			// NOTE: We won't bother setting a transposition entry for a zero-depth evaluation
 		} else {
-			// TODO: Probably should have a list of pre-allocated move vectors, or maybe not store moves at all
-			vector<Move> moves;
-			moves.reserve(MOVE_RESERVE_AMOUNT);
+			MoveList moves;
 			MoveGen::GetMoves(boardState, moves);
 
-			size_t moveCount = moves.size();
+			size_t moveCount = moves.size;
 
 			if (moveCount == 0) {
 				if (boardState.teamData[!TEAM].checkers != 0) {
@@ -165,7 +160,7 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value min, Value max, uint16
 
 					if (lastBestMoveIndex < moveCount) {
 						// Explore the best move first
-						moves.push_back(moves[lastBestMoveIndex]);
+						moves.Add(moves[lastBestMoveIndex]);
 						moveCount++;
 					} else {
 						// Hash collision!
@@ -254,11 +249,11 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 	}
 	infoMutex.unlock();
 
-	vector<Move> initialMoves;
+	MoveList initialMoves;
 	MoveGen::GetMoves(initialBoardState, initialMoves);
 	bool isWhite = (initialBoardState.turnTeam == TEAM_WHITE);
 
-	if (!initialMoves.empty()) {
+	if (initialMoves.size > 0) {
 
 		// Iterative deepening search
 		for (uint16_t curDepth = 1; (curDepth <= depth) && (!g_StopSearch); curDepth++) {

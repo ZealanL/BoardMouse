@@ -99,7 +99,7 @@ bool UCI::ProcessCommand(vector<string> parts) {
 		if (nextIndex < parts.size() && parts[nextIndex] == "moves") {
 			for (int i = nextIndex + 1; i < parts.size(); i++) {
 				string moveStr = parts[i];
-				vector<Move> legalMoves;
+				MoveList legalMoves;
 				MoveGen::GetMoves(newPosition, legalMoves);
 
 				bool moveFound = false;

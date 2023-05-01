@@ -300,8 +300,12 @@ void _GetMovesWrapper(const BoardState& board, T callbackOrCount) {
 	}
 }
 
-void MoveGen::GetMoves(const BoardState& board, vector<Move>& movesOut) {
-	_GetMovesWrapper<false>(board, [&](const Move& move) { movesOut.push_back(move); });
+void MoveGen::GetMoves(const BoardState& board, MoveList& movesOut) {
+	_GetMovesWrapper<false>(board, 
+		[&](const Move& move) { 
+			movesOut.Add(move);
+		}
+	);
 }
 
 void MoveGen::GetMoves(const BoardState& board, MoveCallbackFn callback) {
