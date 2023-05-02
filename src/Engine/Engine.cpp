@@ -2,6 +2,7 @@
 
 #include "Transpos/Transpos.h"
 #include "MoveGen/MoveGen.h"
+#include "MoveOrdering/MoveOrdering.h"
 
 Move g_CurPV[MAX_SEARCH_DEPTH] = {};
 uint16_t g_CurPVLength = 0;
@@ -137,8 +138,10 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value min, Value max, uint16
 
 			// NOTE: We won't bother setting a transposition entry for a zero-depth evaluation
 		} else {
+			// NOTE: Moves will be iterated backwards
 			MoveList moves;
 			MoveGen::GetMoves(boardState, moves);
+			MoveOrdering::SortMoves(moves);
 
 			size_t moveCount = moves.size;
 
