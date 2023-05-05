@@ -14,12 +14,13 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 
 	auto& td = board.teamData[TEAM];
 	auto& etd = board.teamData[!TEAM];
-	Value totalValue = 0;
 
 	BitBoard combinedOccupy = td.occupy | etd.occupy;
 
 	// Clear attacks/pins/checking pieces
 	td.attack = etd.pinnedPieces = td.checkers = 0;
+
+	td.totalValue = 0;
 
 	const auto fnUpdatePins = [&](Pos pinnerPos) {
 		BitBoard betweenMask = LookupGen::GetBetweenMask(pinnerPos, etd.kingPos);
@@ -128,8 +129,6 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 		td.attack |= moves;
 		_UpdateValue<TEAM, PT_KING>(board, td.kingPos, moves);
 	}
-
-	td.totalValue = totalValue;
 }
 
 void BoardState::UpdateAttacksPinsValues(uint8_t team) {
