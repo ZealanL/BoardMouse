@@ -10,7 +10,16 @@ struct Move {
 	// Usually set to the piece we moved, except when promoting pawns
 	uint8_t resultPiece;
 
-	bool isCapture = false;
+	enum {
+		FL_EN_PASSANT = (1 << 0),
+		FL_CAPTURE = (1 << 1),
+		FL_CASTLE = (1 << 2),
+		FL_PROMOTION = (1 << 3),
+	};
+	uint8_t flags;
+
+	// For move ordering, determined after generation
+	uint16_t moveRating;
 
 	Move() = default;
 

@@ -3,11 +3,12 @@
 // Returns true if a should be searched before b
 FINLINE bool operator >(const Move& a, const Move& b) {
 	// TODO: Not very effective
-	return a.isCapture > b.isCapture;
+	return false;
 }
 
 void MoveOrdering::SortMoves(MoveList& moves) {
 	// Insertion sort
+	return;
 
 	size_t moveCount = moves.size;
 	for (size_t i = 1; i < moveCount; i++) {

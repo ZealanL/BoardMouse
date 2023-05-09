@@ -52,15 +52,17 @@ FINLINE void AddMovesFromBB(Pos from, BitBoard toBB, BitBoard enemyOccupy, CALLB
 		toBB.Iterate([&](Pos i) {
 			bool isCapture = enemyOccupy[i];
 
+			uint8_t flags = (isCapture ? Move::FL_CAPTURE : 0);
+
 			// Promotion check
 			if constexpr (PIECE_TYPE == PT_PAWN) {
 				if (((BitBoard)PROMOTION_MASK)[i]) {
 					// Promotion
 					Move
-						pKnight	= { from, i, PT_PAWN, PT_KNIGHT, isCapture },
-						pBishop	= { from, i, PT_PAWN, PT_BISHOP, isCapture },
-						pRook	= { from, i, PT_PAWN, PT_ROOK, isCapture },
-						pQueen	= { from, i, PT_PAWN, PT_QUEEN, isCapture };
+						pKnight	= { from, i, PT_PAWN, PT_KNIGHT, flags | Move::FL_PROMOTION },
+						pBishop	= { from, i, PT_PAWN, PT_BISHOP, flags | Move::FL_PROMOTION },
+						pRook	= { from, i, PT_PAWN, PT_ROOK, flags | Move::FL_PROMOTION },
+						pQueen	= { from, i, PT_PAWN, PT_QUEEN, flags | Move::FL_PROMOTION };
 					callbackOrCount(pKnight);
 					callbackOrCount(pBishop);
 					callbackOrCount(pRook);
