@@ -100,11 +100,12 @@ FINLINE MinMaxResult UpdateMinMax(Value eval, Value& min, Value& max) {
 	}
 }
 
+// NOTE: Value is relative to who's turn it is
 template <uint8_t TEAM>
-Value MinMaxSearchRecursive(BoardState& boardState, Value min, Value max, uint16_t depth, uint16_t extendedDepth, uint16_t pvIndex) {
+Value MinMaxSearchRecursive(BoardState& boardState, Value alpha, Value beta, uint16_t depth, uint16_t extendedDepth, uint16_t pvIndex) {
 
 	if (g_StopSearch)
-		return (TEAM == TEAM_WHITE) ? min : max;
+		return alpha;
 
 	ASSERT(boardState.turnTeam == TEAM);
 
@@ -117,11 +118,13 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value min, Value max, uint16
 		// We've already evaluated this move at >= the current search depth, just use that
 		g_Stats.transposOverrides++;
 
-		Value score = entry->eval;
-		MinMaxResult minMaxResult = UpdateMinMax<TEAM>(entry->eval, min, max);
-		if (minMaxResult == MinMaxResult::PRUNE_BRANCH) {
-			return (TEAM == TEAM_WHITE) ? max : min;
+		Value eval = entry->eval;
+		if (eval >= beta) {
+			// Fail high
+			return beta;
 		}
+
+		alpha = MAX(alpha, eval);
 	} else {
 		// No transposition entry for this position is as deep
 
@@ -134,7 +137,7 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value min, Value max, uint16
 			Value 
 				whiteVal = boardState.teamData[TEAM_WHITE].totalValue,
 				blackVal = boardState.teamData[TEAM_BLACK].totalValue;
-			return (whiteVal - blackVal);
+			return (TEAM == TEAM_WHITE) ? (whiteVal - blackVal) : (blackVal - whiteVal);
 
 			// NOTE: We won't bother setting a transposition entry for a zero-depth evaluation
 		} else {
@@ -191,7 +194,7 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value min, Value max, uint16
 					boardCopy.ExecuteMove(move);
 
 					uint16_t nextDepth, nextExtendedDepth;
-					if (depth == 1 && (boardCopy.teamData[TEAM].checkers || move.isCapture) && extendedDepth > 0) {
+					if (depth == 1 && (boardCopy.teamData[TEAM].checkers || (move.flags & Move::FL_CAPTURE)) && extendedDepth > 0) {
 						// This is a check or capture, and we have extended depth left, so we need to keep searching deeper
 						nextDepth = depth;
 						nextExtendedDepth = extendedDepth - 1;
@@ -200,13 +203,17 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value min, Value max, uint16
 						nextExtendedDepth = extendedDepth;
 					}
 
-					Value eval = MinMaxSearchRecursive<!TEAM>(boardCopy, min, max, nextDepth, nextExtendedDepth, pvIndex + 1);
+					Value eval = -MinMaxSearchRecursive<!TEAM>(boardCopy, -beta, -alpha, nextDepth, nextExtendedDepth, pvIndex + 1);
 
-					MinMaxResult minMaxResult = UpdateMinMax<TEAM>(eval, min, max);
-					if (minMaxResult == MinMaxResult::NEW_BEST) {
+					if (eval >= beta) {
+						// Fail high
+						return beta;
+					}
+
+					if (eval > alpha) {
+						// New best
 						bestMoveIndex = i;
-					} else if (minMaxResult == MinMaxResult::PRUNE_BRANCH) {
-						return (TEAM == TEAM_WHITE) ? max : min;
+						alpha = eval;
 					}
 				}
 
@@ -214,7 +221,7 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value min, Value max, uint16
 				entry->bestMoveIndex = bestMoveIndex;
 				entry->fullHash = boardState.hash;
 				entry->depth = depth;
-				entry->eval = (TEAM == TEAM_WHITE) ? min : max;
+				entry->eval = alpha;
 
 				if (extendedDepth == g_Settings.maxExtendedDepth)
 					g_CurPV[pvIndex] = moves[bestMoveIndex];
@@ -222,7 +229,7 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value min, Value max, uint16
 		}
 	}
 
-	return (TEAM == TEAM_WHITE) ? min : max;
+	return alpha;
 }
 
 uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
@@ -280,7 +287,7 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 				}
 			};
 
-			Value bestEval = fnMinMaxSearch(
+			Value bestRelativeEval = fnMinMaxSearch(
 				isWhite ? TEAM_WHITE : TEAM_BLACK,
 				initialBoardState, -CHECKMATE_VALUE, CHECKMATE_VALUE, curDepth, g_Settings.maxExtendedDepth, 0
 			);
@@ -291,7 +298,7 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 				uciInfo << "info";
 				uciInfo << " depth " << curDepth;
 				uciInfo << " multipv 1"; // TODO: Support multi-PV
-				uciInfo << " score cp " << (bestEval * (isWhite ? 1 : -1));
+				uciInfo << " score cp " << bestRelativeEval;
 				uciInfo << " nodes " << g_Stats.leafNodesEvaluated;
 
 				size_t nps = (size_t)(g_Stats.leafNodesEvaluated / (MAX(msElapsed, 500) / 1000.f));
