@@ -214,6 +214,7 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value alpha, Value beta, uin
 						// New best
 						bestMoveIndex = i;
 						alpha = eval;
+						g_CurPV[pvIndex] = move;
 					}
 				}
 
@@ -222,9 +223,6 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value alpha, Value beta, uin
 				entry->fullHash = boardState.hash;
 				entry->depth = depth;
 				entry->eval = alpha;
-
-				if (extendedDepth == g_Settings.maxExtendedDepth)
-					g_CurPV[pvIndex] = moves[bestMoveIndex];
 			}
 		}
 	}
@@ -246,6 +244,7 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 
 	BoardState initialBoardState = GetPosition();
 	infoMutex.lock();
+	g_Stats = Stats();
 	{
 		if (g_CurState != STATE_READY) {
 			// We aren't able to search right now
@@ -273,11 +272,6 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 				break;
 
 			DLOG("Searching at depth " << curDepth << "/" << depth << "...");
-
-			infoMutex.lock();
-			g_CurPVLength = curDepth;
-			g_Stats = Stats();
-			infoMutex.unlock();
 
 			const auto fnMinMaxSearch = [](uint8_t team, auto&&... args) -> Value {
 				if (team == TEAM_WHITE) {
@@ -311,6 +305,13 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 				}
 				LOG(uciInfo.str());
 			}
+
+			// Remove invalid PV
+			infoMutex.lock();
+			g_CurPVLength = depth;
+			while ((g_CurPVLength > 1) && !g_CurPV[g_CurPVLength - 1].IsValid())
+				g_CurPVLength--;
+			infoMutex.unlock();
 		}
 	}
 
