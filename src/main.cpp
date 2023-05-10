@@ -11,6 +11,7 @@ int main() {
 
 	LookupGen::InitOnce();
 	Transpos::main.Init(TRANSPOS_BUCKET_COUNT_MB * 50);
+	Transpos::pv.Init(TRANSPOS_BUCKET_COUNT_MB * 10);
 	Engine::SetState(Engine::STATE_READY);
 
 	// Initialize with starting position

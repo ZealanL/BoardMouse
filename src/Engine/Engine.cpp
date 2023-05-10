@@ -103,7 +103,7 @@ FINLINE MinMaxResult UpdateMinMax(Value eval, Value& min, Value& max) {
 // NOTE: Value is relative to who's turn it is
 template <uint8_t TEAM>
 Value MinMaxSearchRecursive(
-	BoardState& boardState, Value alpha, Value beta, uint16_t depth, uint16_t extendedDepth, uint16_t pvIndex, 
+	BoardState& boardState, Value alpha, Value beta, uint16_t depth, uint16_t extendedDepth, 
 	bool nullMoveLast = false
 ) {
 
@@ -191,7 +191,7 @@ Value MinMaxSearchRecursive(
 					boardCopy.UpdateAttacksPinsValues(TEAM);
 					boardCopy.turnTeam = !TEAM;
 
-					Value eval = -MinMaxSearchRecursive<!TEAM>(boardCopy, -beta, -alpha, depth - 1, extendedDepth, UINT16_MAX, nullMoveLast);
+					Value eval = -MinMaxSearchRecursive<!TEAM>(boardCopy, -beta, -alpha, depth - 1, extendedDepth, nullMoveLast);
 
 					if (eval >= beta) {
 						// Fail high
@@ -229,7 +229,6 @@ Value MinMaxSearchRecursive(
 
 					Value eval = -MinMaxSearchRecursive<!TEAM>(
 						boardCopy, -beta, -alpha, nextDepth, nextExtendedDepth, 
-						(pvIndex == UINT16_MAX) ? UINT16_MAX : pvIndex + 1, 
 						nullMoveLast
 						);
 
@@ -243,8 +242,10 @@ Value MinMaxSearchRecursive(
 						bestMoveIndex = i;
 						alpha = eval;
 
-						if (pvIndex != UINT16_MAX)
-							g_CurPV[pvIndex] = move;
+						// Update PV table
+						TransposEntry* pvEntry = Transpos::pv.Find(boardState.hash);
+						pvEntry->bestMoveIndex = bestMoveIndex;
+						pvEntry->fullHash = boardState.hash;
 					}
 				}
 
@@ -316,6 +317,35 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 				initialBoardState, -CHECKMATE_VALUE, CHECKMATE_VALUE, curDepth, g_Settings.maxExtendedDepth, 0
 			);
 
+			// Update PV
+			infoMutex.lock();
+			{
+
+				g_CurPVLength = 0;
+				BoardState pvBoardState = initialBoardState;
+				pvBoardState.ForceUpdateAll();
+
+				for (size_t i = 0; i < curDepth; i++) {
+					TransposEntry* entry = Transpos::pv.Find(pvBoardState.hash);
+					if (entry->fullHash == pvBoardState.hash) {
+						MoveList moves;
+						MoveGen::GetMoves(pvBoardState, moves);
+						if (entry->bestMoveIndex < moves.size) {
+							Move bestMove = moves[entry->bestMoveIndex];
+							pvBoardState.ExecuteMove(bestMove);
+							g_CurPV[i] = bestMove;
+							g_CurPVLength++;
+						} else {;
+							// Hash collision!
+							break;
+						}
+					} else {
+						break;
+					}
+				}
+			}
+			infoMutex.unlock();
+
 			{ // Print UCI info
 				// TODO: Move this all to UCI.cpp, use a callback function to trigger print
 				std::stringstream uciInfo;
@@ -335,13 +365,6 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 				}
 				LOG(uciInfo.str());
 			}
-
-			// Remove invalid PV
-			infoMutex.lock();
-			g_CurPVLength = depth;
-			while ((g_CurPVLength > 1) && !g_CurPV[g_CurPVLength - 1].IsValid())
-				g_CurPVLength--;
-			infoMutex.unlock();
 		}
 	}
 

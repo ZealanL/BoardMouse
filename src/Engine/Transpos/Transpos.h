@@ -78,5 +78,5 @@ struct TransposTable {
 };
 
 namespace Transpos {
-	extern TransposTable main;
+	extern TransposTable main, pv;
 }
