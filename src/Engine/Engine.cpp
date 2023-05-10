@@ -187,12 +187,7 @@ Value MinMaxSearchRecursive(
 				if (depth > 1 && !nullMoveUsed) {
 					BoardState boardCopy = boardState;
 
-					// Switch whos turn it is
-					boardCopy.UpdateAttacksPinsValues(TEAM);
-					boardCopy.turnTeam = !TEAM;
-#ifdef UPDATE_HASHES
-					boardCopy.hash ^= LookupGen::turnHashKey;
-#endif
+					boardCopy.ExecuteNullMove();
 
 					Value eval = -MinMaxSearchRecursive<!TEAM>(boardCopy, -beta, -alpha, depth - 1, extendedDepth, true);
 

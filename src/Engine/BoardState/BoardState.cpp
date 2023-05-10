@@ -139,6 +139,15 @@ void BoardState::UpdateAttacksPinsValues(uint8_t team) {
 	}
 }
 
+void BoardState::ExecuteNullMove() {
+	UpdateAttacksPinsValues(turnTeam);
+	enPassantToMask = 0;
+	turnTeam = !turnTeam;
+#ifdef UPDATE_HASHES
+	hash ^= LookupGen::HashTurn();
+#endif
+}
+
 void BoardState::ExecuteMove(Move move) {
 	auto& td = teamData[turnTeam];
 	auto& etd = teamData[!turnTeam];
