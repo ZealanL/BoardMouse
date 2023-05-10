@@ -25,13 +25,29 @@ void MoveRating::RateMoves(BoardState& boardState, MoveList& moves) {
 				rating += PROMOTION_QUEEN_BASE_BONUS;
 		}
 
-		// If normal capture, add change in value to rating
-		if (etd.occupy[move.to]) {
+		bool
+			isNormalCapture = etd.occupy[move.to],
+			fromAttacked	= etd.attack[move.from],
+			toAttacked		= etd.attack[move.to],
+			fromDefended	= td.attack[move.from],
+			toDefended		= td.attack[move.to];
+
+		// If normal capture, add captured piece value to rating
+		if (isNormalCapture) {
 			rating += boardState.pieceValues[move.to];
-			if (etd.attack[move.to]) {
-				// This piece will probably be lost
-				rating -= boardState.pieceValues[move.from];
-			}
+		}
+
+		// Prioritize the evasion of captures
+		if (fromAttacked) {
+			Value evasionValue = boardState.pieceValues[move.from];
+			if (fromDefended)
+				evasionValue /= 2; // We are defended, so moving is less important
+			rating += evasionValue;
+		}
+
+		// If we move to a square the enemy attacks, this piece will probably be lost
+		if (toAttacked) {
+			rating -= boardState.pieceValues[move.from];
 		}
 
 		{ // Add improvement of piece-square value to rating
