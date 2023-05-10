@@ -112,7 +112,7 @@ Value MinMaxSearchRecursive(
 
 	ASSERT(boardState.turnTeam == TEAM);
 
-	TransposEntry* entry = Transpos::Find(boardState.hash);
+	TransposEntry* entry = Transpos::main.Find(boardState.hash);
 	bool entryHashMatches = (entry->fullHash == boardState.hash);
 	if (entryHashMatches)
 		g_Stats.transposHits++;

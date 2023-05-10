@@ -38,23 +38,21 @@ struct TransposBucket {
 // Number of buckets for every megabyte of memory
 #define TRANSPOS_BUCKET_COUNT_MB (1000 * 1000 / sizeof(TransposBucket))
 
-namespace Transpos {
-
-	// TODO: Multithreading support (just give each thread its own portion of the buckets)
-
-	extern TransposBucket* buckets;
-	extern size_t bucketCount;
+// TODO: Multithreading support (just give each thread its own portion of the buckets)
+struct TransposTable {
+	vector<TransposBucket> buckets;
+	
+	TransposTable() {
+		buckets = {};
+	}
 
 	void Init(size_t bucketCount);
-	void Resize(size_t bucketCount);
 	void Reset();
 
 	FINLINE TransposEntry* Find(ZobristHash hash) {
-		ASSERT(buckets != NULL);
-
 		// TODO: Maybe force bucketCount to a power of two and store the number of bits
 		//	That way, we can bit shift instead of expensive modulo on two runtime values
-		size_t bucketIndex = hash % bucketCount;
+		size_t bucketIndex = hash % buckets.size();
 
 		TransposBucket& bucket = buckets[bucketIndex];
 
@@ -77,4 +75,8 @@ namespace Transpos {
 		// TODO: Prioritize replacing the oldest
 		return &(bucket[0]);
 	}
+};
+
+namespace Transpos {
+	extern TransposTable main;
 }

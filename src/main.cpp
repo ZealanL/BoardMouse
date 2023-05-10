@@ -10,7 +10,7 @@ int main() {
 	LOG(" > Built on " __DATE__);
 
 	LookupGen::InitOnce();
-	Transpos::Init(TRANSPOS_BUCKET_COUNT_MB * 50);
+	Transpos::main.Init(TRANSPOS_BUCKET_COUNT_MB * 50);
 	Engine::SetState(Engine::STATE_READY);
 
 	// Initialize with starting position
