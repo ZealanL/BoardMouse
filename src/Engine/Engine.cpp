@@ -314,6 +314,9 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 				initialBoardState, -CHECKMATE_VALUE, CHECKMATE_VALUE, curDepth, g_Settings.maxExtendedDepth, 0
 			);
 
+			if (g_StopSearch) // We stopped early, don't update PV or print info as it is invalid
+				break;
+
 			// Update PV
 			infoMutex.lock();
 			{
