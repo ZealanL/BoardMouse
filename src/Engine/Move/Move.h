@@ -23,7 +23,7 @@ struct Move {
 	uint16_t trueIndex;
 
 	// For move ordering, determined after generation
-	uint16_t moveRating;
+	int16_t moveRating;
 
 	Move() = default;
 
