@@ -162,6 +162,8 @@ bool UCI::ProcessCommand(vector<string> parts) {
 
 	} else if (firstPart == "d") {
 		LOG(Engine::GetPosition());
+	} else if (firstPart == "stop") {
+		StopEngine();
 	} else {
 		// TODO: Support more commands
 	}
