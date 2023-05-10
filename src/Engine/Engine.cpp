@@ -102,7 +102,10 @@ FINLINE MinMaxResult UpdateMinMax(Value eval, Value& min, Value& max) {
 
 // NOTE: Value is relative to who's turn it is
 template <uint8_t TEAM>
-Value MinMaxSearchRecursive(BoardState& boardState, Value alpha, Value beta, uint16_t depth, uint16_t extendedDepth, uint16_t pvIndex) {
+Value MinMaxSearchRecursive(
+	BoardState& boardState, Value alpha, Value beta, uint16_t depth, uint16_t extendedDepth, uint16_t pvIndex, 
+	bool nullMoveLast = false
+) {
 
 	if (g_StopSearch)
 		return alpha;
@@ -179,6 +182,27 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value alpha, Value beta, uin
 					lastBestMoveIndex = -1;
 				}
 
+				// Null move pruning
+				// TODO: Avoid running in zugzwang
+				if (depth > 1 && !nullMoveLast) {
+					BoardState boardCopy = boardState;
+
+					// Switch whos turn it is
+					boardCopy.UpdateAttacksPinsValues(TEAM);
+					boardCopy.turnTeam = !TEAM;
+
+					Value eval = -MinMaxSearchRecursive<!TEAM>(boardCopy, -beta, -alpha, depth - 1, extendedDepth, UINT16_MAX, nullMoveLast);
+
+					if (eval >= beta) {
+						// Fail high
+						return beta;
+					}
+
+					nullMoveLast = true;
+				} else {
+					nullMoveLast = false;
+				}
+
 				size_t bestMoveIndex = 0;
 				// NOTE: size_t is unsigned so our loop condition should be (i < size)
 				for (size_t i = moveCount - 1; i < moveCount; i--) {
@@ -203,7 +227,11 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value alpha, Value beta, uin
 						nextExtendedDepth = extendedDepth;
 					}
 
-					Value eval = -MinMaxSearchRecursive<!TEAM>(boardCopy, -beta, -alpha, nextDepth, nextExtendedDepth, pvIndex + 1);
+					Value eval = -MinMaxSearchRecursive<!TEAM>(
+						boardCopy, -beta, -alpha, nextDepth, nextExtendedDepth, 
+						(pvIndex == UINT16_MAX) ? UINT16_MAX : pvIndex + 1, 
+						nullMoveLast
+						);
 
 					if (eval >= beta) {
 						// Fail high
@@ -214,7 +242,9 @@ Value MinMaxSearchRecursive(BoardState& boardState, Value alpha, Value beta, uin
 						// New best
 						bestMoveIndex = i;
 						alpha = eval;
-						g_CurPV[pvIndex] = move;
+
+						if (pvIndex != UINT16_MAX)
+							g_CurPV[pvIndex] = move;
 					}
 				}
 
