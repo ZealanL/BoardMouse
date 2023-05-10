@@ -104,7 +104,7 @@ FINLINE MinMaxResult UpdateMinMax(Value eval, Value& min, Value& max) {
 template <uint8_t TEAM>
 Value MinMaxSearchRecursive(
 	BoardState& boardState, Value alpha, Value beta, uint16_t depth, uint16_t extendedDepth, 
-	bool nullMoveLast = false
+	bool nullMoveUsed = false
 ) {
 
 	if (g_StopSearch)
@@ -184,23 +184,24 @@ Value MinMaxSearchRecursive(
 
 				// Null move pruning
 				// TODO: Avoid running in zugzwang
-				if (depth > 1 && !nullMoveLast) {
+				if (depth > 1 && !nullMoveUsed) {
 					BoardState boardCopy = boardState;
 
 					// Switch whos turn it is
 					boardCopy.UpdateAttacksPinsValues(TEAM);
 					boardCopy.turnTeam = !TEAM;
+#ifdef UPDATE_HASHES
+					boardCopy.hash ^= LookupGen::turnHashKey;
+#endif
 
-					Value eval = -MinMaxSearchRecursive<!TEAM>(boardCopy, -beta, -alpha, depth - 1, extendedDepth, nullMoveLast);
+					Value eval = -MinMaxSearchRecursive<!TEAM>(boardCopy, -beta, -alpha, depth - 1, extendedDepth, true);
 
 					if (eval >= beta) {
 						// Fail high
 						return beta;
 					}
 
-					nullMoveLast = true;
-				} else {
-					nullMoveLast = false;
+					nullMoveUsed = true;
 				}
 
 				MoveOrdering::SortMoves(moves);
@@ -231,7 +232,7 @@ Value MinMaxSearchRecursive(
 
 					Value eval = -MinMaxSearchRecursive<!TEAM>(
 						boardCopy, -beta, -alpha, nextDepth, nextExtendedDepth, 
-						nullMoveLast
+						nullMoveUsed
 						);
 
 					if (eval >= beta) {
