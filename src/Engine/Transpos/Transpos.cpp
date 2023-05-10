@@ -11,5 +11,4 @@ void TransposTable::Reset() {
 }
 
 TransposTable
-Transpos::main = {},
-Transpos::pv = {};
+Transpos::main = {};

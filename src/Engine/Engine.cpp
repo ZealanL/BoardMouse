@@ -243,11 +243,6 @@ Value MinMaxSearchRecursive(
 						// New best
 						bestMoveIndex = move.trueIndex;
 						alpha = eval;
-
-						// Update PV table
-						TransposEntry* pvEntry = Transpos::pv.Find(boardState.hash);
-						pvEntry->bestMoveTrueIndex = bestMoveIndex;
-						pvEntry->fullHash = boardState.hash;
 					}
 				}
 
@@ -328,7 +323,7 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 				pvBoardState.ForceUpdateAll();
 
 				for (size_t i = 0; i < curDepth; i++) {
-					TransposEntry* entry = Transpos::pv.Find(pvBoardState.hash);
+					TransposEntry* entry = Transpos::main.Find(pvBoardState.hash);
 					if (entry->fullHash == pvBoardState.hash) {
 						MoveList moves;
 						MoveGen::GetMoves(pvBoardState, moves);
