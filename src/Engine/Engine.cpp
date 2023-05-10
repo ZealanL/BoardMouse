@@ -3,6 +3,7 @@
 #include "Transpos/Transpos.h"
 #include "MoveGen/MoveGen.h"
 #include "MoveOrdering/MoveOrdering.h"
+#include "MoveRating/MoveRating.h"
 
 Move g_CurPV[MAX_SEARCH_DEPTH] = {};
 uint16_t g_CurPVLength = 0;
@@ -199,6 +200,7 @@ Value MinMaxSearchRecursive(
 					nullMoveUsed = true;
 				}
 
+				MoveRating::RateMoves(boardState, moves);
 				MoveOrdering::SortMoves(moves);
 
 				size_t bestMoveIndex = 0;
