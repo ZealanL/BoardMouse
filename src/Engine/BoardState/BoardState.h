@@ -70,13 +70,19 @@ struct BoardState {
 	// Updates all persistent values, call this when you modify the board beyond ExecuteMove()
 	void ForceUpdateAll();
 
-	// Run a move on the board, update accordingly
+	// Execute a move on the board, update accordingly
 	void ExecuteMove(Move move);
 
 	// Update a team's attack and pin masks, within an update mask
 	void UpdateAttacksPinsValues(uint8_t team);
 
+	// Execute a move that does nothing and just switches whos turn it is
 	void ExecuteNullMove();
+
+	FINLINE bool IsEndgame() {
+		// TODO: Improve
+		return !teamData[TEAM_WHITE].pieceSets[PT_QUEEN] && !teamData[TEAM_BLACK].pieceSets[PT_QUEEN];
+	}
 
 	friend std::ostream& operator <<(std::ostream& stream, const BoardState& boardState);
 };

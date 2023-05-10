@@ -5,6 +5,8 @@
 // Value of a piece or position in centipawns
 typedef int64_t Value;
 
+// Number used for representing centipawn value of a checkmate internally
+// Just needs to be a big number that will never be reached otherwise
 #define CHECKMATE_VALUE (1000 * 1000)
 
 namespace PieceValue {

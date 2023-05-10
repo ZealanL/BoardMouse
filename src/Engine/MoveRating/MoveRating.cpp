@@ -6,8 +6,10 @@ void MoveRating::RateMoves(BoardState& boardState, MoveList& moves) {
 	uint8_t team = boardState.turnTeam;
 	auto& td = boardState.teamData[team];
 	auto& etd = boardState.teamData[!team];
-	for (Move& move : moves) {
 
+	bool isEndgame = boardState.IsEndgame();
+
+	for (Move& move : moves) {
 		Value rating = 0;
 
 		// Captures always have a decent bonus
@@ -24,10 +26,9 @@ void MoveRating::RateMoves(BoardState& boardState, MoveList& moves) {
 		}
 
 		{ // Add improvement of piece-square value to rating
-			// TODO: Support endgame
 			Value
-				fromSquareValue = LookupGen::GetPieceSquareValue(move.originalPiece, move.from, !team, false),
-				toSquareValue = LookupGen::GetPieceSquareValue(move.originalPiece, move.to, !team, false);
+				fromSquareValue = LookupGen::GetPieceSquareValue(move.originalPiece, move.from, !team, isEndgame),
+				toSquareValue = LookupGen::GetPieceSquareValue(move.originalPiece, move.to, !team, isEndgame);
 
 			rating += toSquareValue - fromSquareValue;
 		}

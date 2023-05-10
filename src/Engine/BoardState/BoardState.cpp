@@ -2,8 +2,8 @@
 #include "../LookupGen/LookupGen.h"
 
 template<uint8_t TEAM, uint8_t pieceType>
-FINLINE void _UpdateValue(BoardState& board, Pos pos, BitBoard moves) {
-	Value value = LookupGen::GetPieceSquareValue(pieceType, pos, TEAM);
+FINLINE void _UpdateValue(BoardState& board, Pos pos, BitBoard moves, bool isEndgame) {
+	Value value = LookupGen::GetPieceSquareValue(pieceType, pos, TEAM, isEndgame);
 	value += PieceValue::MOBILITY_BONUS[pieceType] * moves.BitCount();
 	board.teamData[TEAM].totalValue += value;
 	board.pieceValues[pos] = value;
@@ -14,6 +14,7 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 
 	auto& td = board.teamData[TEAM];
 	auto& etd = board.teamData[!TEAM];
+	bool isEndgame = board.IsEndgame();
 
 	BitBoard combinedOccupy = td.occupy | etd.occupy;
 
@@ -44,7 +45,7 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 				td.checkers.Set(i, true);
 			}
 
-			_UpdateValue<TEAM, PT_PAWN>(board, i, moves);
+			_UpdateValue<TEAM, PT_PAWN>(board, i, moves, isEndgame);
 		}
 	);
 
@@ -64,7 +65,7 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 				}
 			}
 
-			_UpdateValue<TEAM, PT_ROOK>(board, i, moves);
+			_UpdateValue<TEAM, PT_ROOK>(board, i, moves, isEndgame);
 		}
 	);
 
@@ -80,7 +81,7 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 				td.checkers.Set(i, true);
 			}
 
-			_UpdateValue<TEAM, PT_KNIGHT>(board, i, moves);
+			_UpdateValue<TEAM, PT_KNIGHT>(board, i, moves, isEndgame);
 		}
 	);
 
@@ -99,7 +100,7 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 				}
 			}
 
-			_UpdateValue<TEAM, PT_BISHOP>(board, i, moves);
+			_UpdateValue<TEAM, PT_BISHOP>(board, i, moves, isEndgame);
 		}
 	);
 
@@ -120,14 +121,14 @@ FINLINE void _UpdateAttacksPinsValues(BoardState& board) {
 				}
 			}
 			
-			_UpdateValue<TEAM, PT_QUEEN>(board, i, moves);
+			_UpdateValue<TEAM, PT_QUEEN>(board, i, moves, isEndgame);
 		}
 	);
 
 	{ // King
 		BitBoard moves = LookupGen::GetKingMoves(td.kingPos);
 		td.attack |= moves;
-		_UpdateValue<TEAM, PT_KING>(board, td.kingPos, moves);
+		_UpdateValue<TEAM, PT_KING>(board, td.kingPos, moves, isEndgame);
 	}
 }
 
