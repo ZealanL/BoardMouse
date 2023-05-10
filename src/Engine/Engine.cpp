@@ -147,8 +147,7 @@ Value MinMaxSearchRecursive(
 			// NOTE: Moves will be iterated backwards
 			MoveList moves;
 			MoveGen::GetMoves(boardState, moves);
-			MoveOrdering::SortMoves(moves);
-
+			
 			size_t moveCount = moves.size;
 
 			if (moveCount == 0) {
@@ -165,10 +164,11 @@ Value MinMaxSearchRecursive(
 			} else {
 				size_t lastBestMoveIndex;
 				if (entryHashMatches) {
-					lastBestMoveIndex = entry->bestMoveIndex;
+					lastBestMoveIndex = entry->bestMoveTrueIndex;
 
 					if (lastBestMoveIndex < moveCount) {
 						// Explore the best move first
+						// We haven't ordered moves yet so this just requires index lookup
 						moves.Add(moves[lastBestMoveIndex]);
 						moveCount++;
 					} else {
@@ -202,6 +202,8 @@ Value MinMaxSearchRecursive(
 				} else {
 					nullMoveLast = false;
 				}
+
+				MoveOrdering::SortMoves(moves);
 
 				size_t bestMoveIndex = 0;
 				// NOTE: size_t is unsigned so our loop condition should be (i < size)
@@ -239,18 +241,18 @@ Value MinMaxSearchRecursive(
 
 					if (eval > alpha) {
 						// New best
-						bestMoveIndex = i;
+						bestMoveIndex = move.trueIndex;
 						alpha = eval;
 
 						// Update PV table
 						TransposEntry* pvEntry = Transpos::pv.Find(boardState.hash);
-						pvEntry->bestMoveIndex = bestMoveIndex;
+						pvEntry->bestMoveTrueIndex = bestMoveIndex;
 						pvEntry->fullHash = boardState.hash;
 					}
 				}
 
 				// Update table entry
-				entry->bestMoveIndex = bestMoveIndex;
+				entry->bestMoveTrueIndex = bestMoveIndex;
 				entry->fullHash = boardState.hash;
 				entry->depth = depth;
 				entry->eval = alpha;
@@ -330,8 +332,8 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 					if (entry->fullHash == pvBoardState.hash) {
 						MoveList moves;
 						MoveGen::GetMoves(pvBoardState, moves);
-						if (entry->bestMoveIndex < moves.size) {
-							Move bestMove = moves[entry->bestMoveIndex];
+						if (entry->bestMoveTrueIndex < moves.size) {
+							Move bestMove = moves[entry->bestMoveTrueIndex];
 							pvBoardState.ExecuteMove(bestMove);
 							g_CurPV[i] = bestMove;
 							g_CurPVLength++;

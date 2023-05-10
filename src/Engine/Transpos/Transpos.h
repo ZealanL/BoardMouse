@@ -7,8 +7,8 @@ struct TransposEntry {
 	Value eval;
 	uint16_t depth;
 
-	// Moves are always generated in the same order, so we just need to store the index
-	uint16_t bestMoveIndex;
+	// True index of the best move (see Move.trueIndex)
+	uint16_t bestMoveTrueIndex;
 
 	// TODO: Store type for proper usage with alpha-beta pruning
 	// Is this an alpha eval, beta eval, or exact eval?

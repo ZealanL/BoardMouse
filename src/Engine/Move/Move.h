@@ -18,6 +18,10 @@ struct Move {
 	};
 	uint8_t flags;
 
+	// Original index of this move, set during move generation
+	// The same position will always generate moves in the same order, so this index can be used to reference a specific move 
+	uint16_t trueIndex;
+
 	// For move ordering, determined after generation
 	uint16_t moveRating;
 

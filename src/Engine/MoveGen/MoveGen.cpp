@@ -303,8 +303,12 @@ void _GetMovesWrapper(const BoardState& board, T callbackOrCount) {
 }
 
 void MoveGen::GetMoves(const BoardState& board, MoveList& movesOut) {
+	uint16_t curTrueIndex = 0;
 	_GetMovesWrapper<false>(board, 
-		[&](const Move& move) { 
+		[&](Move& move) { 
+			move.trueIndex = curTrueIndex;
+			curTrueIndex++;
+
 			movesOut.Add(move);
 		}
 	);
