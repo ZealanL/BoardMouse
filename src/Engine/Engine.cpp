@@ -347,7 +347,16 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 				uciInfo << "info";
 				uciInfo << " depth " << curDepth;
 				uciInfo << " multipv 1"; // TODO: Support multi-PV
-				uciInfo << " score cp " << bestRelativeEval;
+
+				if (abs(bestRelativeEval) == CHECKMATE_VALUE) {
+					size_t remainingMovesTilCheckmate = g_CurPVLength;
+					bool weWin = (bestRelativeEval > 0);
+
+					size_t mateInMoveCount = (remainingMovesTilCheckmate + weWin) / 2;
+					uciInfo << " mate " << (weWin ? "" : "-") << mateInMoveCount;
+				} else {
+					uciInfo << " score cp " << bestRelativeEval;
+				}
 				uciInfo << " nodes " << g_Stats.leafNodesEvaluated;
 
 				size_t nps = (size_t)(g_Stats.leafNodesEvaluated / (MAX(msElapsed, 500) / 1000.f));
