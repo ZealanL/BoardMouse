@@ -185,7 +185,7 @@ Value MinMaxSearchRecursive(
 
 				// Null move pruning
 				// TODO: Avoid running in zugzwang
-				if (!boardState.IsEndgame() && !nullMoveUsed && depth > 1) {
+				if (!boardState.IsEndgame() && !nullMoveUsed && depth > 1 && !boardState.teamData[!TEAM].checkers) {
 					BoardState boardCopy = boardState;
 
 					boardCopy.ExecuteNullMove();
