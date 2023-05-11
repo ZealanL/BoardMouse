@@ -79,28 +79,6 @@ void Engine::StopSearch() {
 	infoMutex.unlock();
 }
 
-enum class MinMaxResult {
-	NONE,
-	NEW_BEST,
-	PRUNE_BRANCH
-};
-
-template <uint8_t TEAM>
-FINLINE MinMaxResult UpdateMinMax(Value eval, Value& min, Value& max) {
-	if ((TEAM == TEAM_WHITE) ? (eval >= max) : (eval <= min)) {
-		// Branch will not be chosen because it already has a move that is worse than any move in another branch
-		// We can just skip this whole branch
-		return MinMaxResult::PRUNE_BRANCH;
-	}
-
-	if ((TEAM == TEAM_WHITE) ? (eval > min) : (eval < max)) {
-		(TEAM == TEAM_WHITE ? min : max) = eval;
-		return MinMaxResult::NEW_BEST;
-	} else {
-		return MinMaxResult::NONE;
-	}
-}
-
 // NOTE: Value is relative to who's turn it is
 template <uint8_t TEAM>
 Value MinMaxSearchRecursive(
