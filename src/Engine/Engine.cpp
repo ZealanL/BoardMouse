@@ -81,7 +81,7 @@ void Engine::StopSearch() {
 }
 
 static ButterflyBoard g_ButterflyBoard = {};
-constexpr uint16_t BUTTERFLY_BOARD_DEPTH = 4; // Depth at which we reset and start using the butterfly board
+constexpr uint16_t BUTTERFLY_BOARD_DEPTH = 7; // Depth at which we reset and start using the butterfly board
 
 // NOTE: Value is relative to who's turn it is
 template <uint8_t TEAM>
