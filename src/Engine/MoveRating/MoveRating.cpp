@@ -2,7 +2,7 @@
 
 #include "../LookupGen/LookupGen.h"
 
-void MoveRating::RateMoves(BoardState& boardState, MoveList& moves) {
+void MoveRating::RateMoves(BoardState& boardState, MoveList& moves, ButterflyBoard& butterflyBoard) {
 
 	constexpr Value
 		CAPTURE_BASE_BONUS = 100,
@@ -57,6 +57,9 @@ void MoveRating::RateMoves(BoardState& boardState, MoveList& moves) {
 
 			rating += toSquareValue - fromSquareValue;
 		}
+
+		// Add butterfly bonus
+		rating += butterflyBoard.data[team][move.from][move.to];
 
 		move.moveRating = CLAMP(rating, INT16_MIN, INT16_MAX);
 	}

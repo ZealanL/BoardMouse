@@ -4,6 +4,7 @@
 #include "MoveGen/MoveGen.h"
 #include "MoveOrdering/MoveOrdering.h"
 #include "MoveRating/MoveRating.h"
+#include "ButterflyBoard/ButterflyBoard.h"
 
 Move g_CurPV[MAX_SEARCH_DEPTH] = {};
 uint16_t g_CurPVLength = 0;
@@ -79,6 +80,9 @@ void Engine::StopSearch() {
 	infoMutex.unlock();
 }
 
+static ButterflyBoard g_ButterflyBoard = {};
+constexpr uint16_t BUTTERFLY_BOARD_DEPTH = 4; // Depth at which we reset and start using the butterfly board
+
 // NOTE: Value is relative to who's turn it is
 template <uint8_t TEAM>
 Value MinMaxSearchRecursive(
@@ -123,6 +127,11 @@ Value MinMaxSearchRecursive(
 
 			// NOTE: We won't bother setting a transposition entry for a zero-depth evaluation
 		} else {
+
+			if (depth == BUTTERFLY_BOARD_DEPTH + 1) {
+				g_ButterflyBoard.Reset();
+			}
+
 			// NOTE: Moves will be iterated backwards
 			MoveList moves;
 			MoveGen::GetMoves(boardState, moves);
@@ -178,7 +187,7 @@ Value MinMaxSearchRecursive(
 					nullMoveUsed = true;
 				}
 
-				MoveRating::RateMoves(boardState, moves);
+				MoveRating::RateMoves(boardState, moves, g_ButterflyBoard);
 				MoveOrdering::SortMoves(moves);
 
 				size_t bestMoveIndex = 0;
@@ -212,11 +221,19 @@ Value MinMaxSearchRecursive(
 
 					if (eval >= beta) {
 						// Fail high
+
+						if (depth <= BUTTERFLY_BOARD_DEPTH)
+							g_ButterflyBoard.data[TEAM][move.from][move.to] |= BUTTERFLY_VAL_BETA_CUTOFF;
+
 						return beta;
 					}
 
 					if (eval > alpha) {
 						// New best
+
+						if (depth <= BUTTERFLY_BOARD_DEPTH)
+							g_ButterflyBoard.data[TEAM][move.from][move.to] |= BUTTERFLY_VAL_ALPHA_BEST;
+
 						bestMoveIndex = move.trueIndex;
 						alpha = eval;
 					}
@@ -278,6 +295,8 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 			DLOG("Searching at depth " << curDepth << "/" << depth << "...");
 
 			const auto fnMinMaxSearch = [](uint8_t team, auto&&... args) -> Value {
+				g_ButterflyBoard.Reset();
+
 				if (team == TEAM_WHITE) {
 					return MinMaxSearchRecursive<TEAM_WHITE>(args...);
 				} else {
