@@ -10,7 +10,7 @@ enum {
 };
 
 // These squares must be empty in order to castle
-constexpr uint64_t CASTLE_EMPTY_MASKS[TEAM_AMOUNT][CASTLE_SIDE_AMOUNT] = {
+constexpr BitBoard CASTLE_EMPTY_MASKS[TEAM_AMOUNT][CASTLE_SIDE_AMOUNT] = {
 		{ // White
 			{ ANI_BM('B1') | ANI_BM('C1') | ANI_BM('D1') }, // Far
 			{ ANI_BM('F1') | ANI_BM('G1') }, // Near
@@ -23,7 +23,7 @@ constexpr uint64_t CASTLE_EMPTY_MASKS[TEAM_AMOUNT][CASTLE_SIDE_AMOUNT] = {
 };
 
 // These squares cannot be in attack from the enemy in order to castle
-constexpr uint64_t CASTLE_SAFETY_MASKS[TEAM_AMOUNT][CASTLE_SIDE_AMOUNT] = {
+constexpr BitBoard CASTLE_SAFETY_MASKS[TEAM_AMOUNT][CASTLE_SIDE_AMOUNT] = {
 	{ // White
 		{ ANI_BM('C1') | ANI_BM('D1') }, // Far
 		{ ANI_BM('F1') | ANI_BM('G1') }, // Near
@@ -38,7 +38,7 @@ constexpr uint64_t CASTLE_SAFETY_MASKS[TEAM_AMOUNT][CASTLE_SIDE_AMOUNT] = {
 template <uint8_t PIECE_TYPE, bool JUST_COUNT, typename CALLBACK>
 FINLINE void AddMovesFromBB(Pos from, BitBoard toBB, BitBoard enemyOccupy, CALLBACK callbackOrCount) {
 
-	constexpr uint64_t PROMOTION_MASK = BB_MASK_RANK(0) | BB_MASK_RANK(7);
+	constexpr BitBoard PROMOTION_MASK = BB_MASK_RANK(0) | BB_MASK_RANK(7);
 
 	if constexpr (JUST_COUNT) {
 		callbackOrCount += toBB.BitCount();

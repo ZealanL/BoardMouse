@@ -6,7 +6,7 @@
 struct BitBoard {
 	uint64_t data;
 
-	BitBoard(uint64_t data64 = 0) : data(data64) {}
+	constexpr BitBoard(uint64_t data64 = 0) : data(data64) {}
 
 	FINLINE static BitBoard Filled() {
 		return ~0ull;
@@ -61,11 +61,11 @@ struct BitBoard {
 		return __popcnt64(data);
 	}
 
-	FINLINE operator uint64_t&() {
+	FINLINE constexpr operator uint64_t&() {
 		return data;
 	}
 
-	FINLINE operator uint64_t() const {
+	FINLINE constexpr operator uint64_t() const {
 		return data;
 	}
 
@@ -87,7 +87,7 @@ struct BitBoard {
 SASSERT(sizeof(BitBoard) == sizeof(uint64_t));
 
 // BitBoard mask for all squares along the edges of the board
-#define BB_MASK_BORDER ((uint64_t)0xFF818181818181FF)
+#define BB_MASK_BORDER ((BitBoard)0xFF818181818181FF)
 
 // Bitboard mask for a rank
-#define BB_MASK_RANK(index) ((uint64_t)0xFF << (uint64_t)(index * 8))
+#define BB_MASK_RANK(index) ((BitBoard)0xFFull << (BitBoard)(index * 8))
