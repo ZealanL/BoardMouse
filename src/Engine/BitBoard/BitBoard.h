@@ -90,4 +90,6 @@ SASSERT(sizeof(BitBoard) == sizeof(uint64_t));
 #define BB_MASK_BORDER ((BitBoard)0xFF818181818181FF)
 
 // Bitboard mask for a rank
-#define BB_MASK_RANK(index) ((BitBoard)0xFFull << (BitBoard)(index * 8))
+#define BB_MASK_RANK(index) ((BitBoard)0xFFull << (index * 8ull))
+
+#define BB_MASK_FILE(index) ((BitBoard)0x101010101010101ull << (index * 8ull))
