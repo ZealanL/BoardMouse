@@ -5,6 +5,7 @@
 #include "MoveOrdering/MoveOrdering.h"
 #include "MoveRating/MoveRating.h"
 #include "ButterflyBoard/ButterflyBoard.h"
+#include "Heuristics/Heuristics.h"
 
 Move g_CurPV[MAX_SEARCH_DEPTH] = {};
 uint16_t g_CurPVLength = 0;
@@ -83,6 +84,18 @@ void Engine::StopSearch() {
 static ButterflyBoard g_ButterflyBoard = {};
 constexpr uint16_t BUTTERFLY_BOARD_DEPTH = 7; // Depth at which we reset and start using the butterfly board
 
+template<uint8_t TEAM>
+FINLINE Value CalcRelativeEval(const BoardState& boardState, bool isEndgame) {
+	Value
+		whiteVal = boardState.teamData[TEAM_WHITE].totalValue,
+		blackVal = boardState.teamData[TEAM_BLACK].totalValue;
+
+	whiteVal += Heuristics::GetSpaceControlBonus<TEAM_WHITE>(boardState, isEndgame);
+	blackVal += Heuristics::GetSpaceControlBonus<TEAM_BLACK>(boardState, isEndgame);
+
+	return (TEAM == TEAM_WHITE) ? (whiteVal - blackVal) : (blackVal - whiteVal);
+}
+
 // NOTE: Value is relative to who's turn it is
 template <uint8_t TEAM>
 Value MinMaxSearchRecursive(
@@ -120,10 +133,7 @@ Value MinMaxSearchRecursive(
 			boardState.UpdateAttacksPinsValues(TEAM);
 
 			g_Stats.leafNodesEvaluated++;
-			Value 
-				whiteVal = boardState.teamData[TEAM_WHITE].totalValue,
-				blackVal = boardState.teamData[TEAM_BLACK].totalValue;
-			return (TEAM == TEAM_WHITE) ? (whiteVal - blackVal) : (blackVal - whiteVal);
+			return CalcRelativeEval<TEAM>(boardState, boardState.IsEndgame());
 
 			// NOTE: We won't bother setting a transposition entry for a zero-depth evaluation
 		} else {
