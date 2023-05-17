@@ -26,8 +26,12 @@ void EngineSearchLoop() {
 			uint8_t searchResult = Engine::DoSearch(searchParams.depth, searchParams.maxTimeMS);
 			if (searchResult != Engine::SEARCH_COULDNT_START) {
 				vector<Move> moves = Engine::GetCurrentPV();
-				ASSERT(!moves.empty());
-				LOG("bestmove " << moves.front());
+				if (moves.empty()) {
+					assert(false);
+					LOG("bestmove none");
+				} else {
+					LOG("bestmove " << moves.front());
+				}
 			}
 		}
 	}
