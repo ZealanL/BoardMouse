@@ -60,4 +60,8 @@ struct MoveList {
 
 	FINLINE const Move* end() const { return data + size; }
 	FINLINE Move* end() { return data + size; }
+	
+	FINLINE void Clear() {
+		size = 0;
+	}
 };
