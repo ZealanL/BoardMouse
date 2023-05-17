@@ -180,7 +180,8 @@ Value MinMaxSearchRecursive(
 					lastBestMoveIndex = -1;
 				}
 
-				// Null move pruning
+#ifdef ENABLE_NULL_MOVE_SEARCH
+				// Null move search/pruning
 				// TODO: Avoid running in zugzwang
 				if (depth > 3 && !boardState.IsEndgame() && !nullMoveUsed && !boardState.teamData[!TEAM].checkers) {
 					BoardState boardCopy = boardState;
@@ -196,6 +197,7 @@ Value MinMaxSearchRecursive(
 
 					nullMoveUsed = true;
 				}
+#endif
 
 				MoveRating::RateMoves(boardState, moves, g_ButterflyBoard);
 				MoveOrdering::SortMoves(moves);
