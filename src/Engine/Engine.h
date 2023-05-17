@@ -3,6 +3,7 @@
 #include "LookupGen/LookupGen.h"
 
 #define MAX_SEARCH_DEPTH 256
+#define MAX_EXTENDED_DEPTH 16
 
 namespace Engine {
 
