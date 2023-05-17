@@ -153,7 +153,7 @@ Value MinMaxSearchRecursive(
 					// Checkmate!
 					// Other team wins
 					g_Stats.matesFound++;
-					return -CHECKMATE_VALUE;
+					return -(CHECKMATE_VALUE + depth + extendedDepth); // Prioritize earlier checkmate
 				} else {
 					// Stalemate
 					g_Stats.stalematesFound++;
@@ -316,7 +316,7 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 
 			Value bestRelativeEval = fnMinMaxSearch(
 				isWhite ? TEAM_WHITE : TEAM_BLACK,
-				initialBoardState, -CHECKMATE_VALUE - 1, CHECKMATE_VALUE + 1, curDepth, g_Settings.maxExtendedDepth, 0
+				initialBoardState, -CHECKMATE_VALUE * 2, CHECKMATE_VALUE * 2, curDepth, g_Settings.maxExtendedDepth, 0
 			);
 
 			if (g_StopSearch) // We stopped early, don't update PV or print info as it is invalid
@@ -358,7 +358,7 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 				uciInfo << " depth " << curDepth;
 				uciInfo << " multipv 1"; // TODO: Support multi-PV
 
-				if (abs(bestRelativeEval) == CHECKMATE_VALUE) {
+				if (abs(bestRelativeEval) >= CHECKMATE_VALUE) {
 					size_t remainingMovesTilCheckmate = g_CurPVLength;
 					bool weWin = (bestRelativeEval > 0);
 
