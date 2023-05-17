@@ -2,7 +2,7 @@
 #include "BoardState/BoardState.h"
 #include "LookupGen/LookupGen.h"
 
-#define MAX_SEARCH_DEPTH 4096
+#define MAX_SEARCH_DEPTH 256
 
 namespace Engine {
 
