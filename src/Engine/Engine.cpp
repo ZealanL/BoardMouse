@@ -96,11 +96,21 @@ FINLINE Value CalcRelativeEval(const BoardState& boardState, bool isEndgame) {
 	return (TEAM == TEAM_WHITE) ? (whiteVal - blackVal) : (blackVal - whiteVal);
 }
 
+struct SearchInfo {
+	uint16_t
+		curDepth = 0, depthRemaining, curExtendedDepth = 0, extendedDepthRemaining;
+
+	bool nullMoveUsed = false;
+};
+
+struct SearchFrame {
+	MoveList moves;
+};
+
 // NOTE: Value is relative to who's turn it is
 template <uint8_t TEAM>
 Value MinMaxSearchRecursive(
-	BoardState& boardState, Value alpha, Value beta, uint16_t depth, uint16_t extendedDepth, 
-	bool nullMoveUsed = false
+	BoardState& boardState, Value alpha, Value beta, SearchInfo& info, SearchFrame* frame
 ) {
 
 	if (g_StopSearch)
@@ -113,7 +123,7 @@ Value MinMaxSearchRecursive(
 	if (entryHashMatches)
 		g_Stats.transposHits++;
 
-	if (entryHashMatches && entry->depth >= depth) {
+	if (entryHashMatches && entry->depth >= info.depthRemaining) {
 		// We've already evaluated this move at >= the current search depth, just use that
 		g_Stats.transposOverrides++;
 
@@ -127,7 +137,7 @@ Value MinMaxSearchRecursive(
 	} else {
 		// No transposition entry for this position is as deep
 
-		if (depth == 0) {
+		if (info.depthRemaining == 0) {
 
 			// Update values for this team
 			boardState.UpdateAttacksPinsValues(TEAM);
@@ -138,12 +148,13 @@ Value MinMaxSearchRecursive(
 			// NOTE: We won't bother setting a transposition entry for a zero-depth evaluation
 		} else {
 
-			if (depth == BUTTERFLY_BOARD_DEPTH + 1) {
+			if (info.depthRemaining == BUTTERFLY_BOARD_DEPTH + 1) {
 				g_ButterflyBoard.Reset();
 			}
 
 			// NOTE: Moves will be iterated backwards
-			MoveList moves;
+			MoveList& moves = frame->moves;
+			moves.Clear();
 			MoveGen::GetMoves(boardState, moves);
 			
 			size_t moveCount = moves.size;
@@ -153,7 +164,7 @@ Value MinMaxSearchRecursive(
 					// Checkmate!
 					// Other team wins
 					g_Stats.matesFound++;
-					return -(CHECKMATE_VALUE + depth + extendedDepth); // Prioritize earlier checkmate
+					return -(CHECKMATE_VALUE + info.depthRemaining + info.extendedDepthRemaining); // Prioritize earlier checkmate
 				} else {
 					// Stalemate
 					g_Stats.stalematesFound++;
@@ -179,23 +190,26 @@ Value MinMaxSearchRecursive(
 				} else {
 					lastBestMoveIndex = -1;
 				}
-
 #ifdef ENABLE_NULL_MOVE_SEARCH
 				// Null move search/pruning
 				// TODO: Avoid running in zugzwang
-				if (depth > 3 && !boardState.IsEndgame() && !nullMoveUsed && !boardState.teamData[!TEAM].checkers) {
+				if (info.depthRemaining > 3 && !boardState.IsEndgame() && !info.nullMoveUsed && !boardState.teamData[!TEAM].checkers) {
 					BoardState boardCopy = boardState;
 
 					boardCopy.ExecuteNullMove();
 
-					Value eval = -MinMaxSearchRecursive<!TEAM>(boardCopy, -beta, -alpha, depth - 2, extendedDepth, true);
+					info.curDepth++;
+					info.depthRemaining--;
+					Value eval = -MinMaxSearchRecursive<!TEAM>(boardCopy, -beta, -alpha, info, frame + 1);
+					info.curDepth--;
+					info.depthRemaining++;
 
 					if (eval >= beta) {
 						// Fail high
 						return beta;
 					}
 
-					nullMoveUsed = true;
+					info.nullMoveUsed = true;
 				}
 #endif
 
@@ -216,25 +230,35 @@ Value MinMaxSearchRecursive(
 					BoardState boardCopy = boardState;
 					boardCopy.ExecuteMove(move);
 
-					uint16_t nextDepth, nextExtendedDepth;
-					if (depth == 1 && (boardCopy.teamData[TEAM].checkers || (move.flags & Move::FL_CAPTURE)) && extendedDepth > 0) {
-						// This is a check or capture, and we have extended depth left, so we need to keep searching deeper
-						nextDepth = depth;
-						nextExtendedDepth = extendedDepth - 1;
-					} else {
-						nextDepth = depth - 1;
-						nextExtendedDepth = extendedDepth;
-					}
-
-					Value eval = -MinMaxSearchRecursive<!TEAM>(
-						boardCopy, -beta, -alpha, nextDepth, nextExtendedDepth, 
-						nullMoveUsed
+					Value eval;
+					if (
+						info.depthRemaining == 1 && // Final depth (not counting eval)
+						(boardCopy.teamData[TEAM].checkers || (move.flags & Move::FL_CAPTURE)) && // Is check or capture
+						info.extendedDepthRemaining > 0 // We have extended depth left
+						) {
+						// Extended depth search
+						info.curExtendedDepth++;
+						info.extendedDepthRemaining--;
+						eval = -MinMaxSearchRecursive<!TEAM>(
+							boardCopy, -beta, -alpha, info, frame + 1
 						);
+						info.curExtendedDepth--;
+						info.extendedDepthRemaining++;
+					} else {
+						// Normal search
+						info.curDepth++;
+						info.depthRemaining--;
+						eval = -MinMaxSearchRecursive<!TEAM>(
+							boardCopy, -beta, -alpha, info, frame + 1
+							);
+						info.curDepth--;
+						info.depthRemaining++;
+					}
 
 					if (eval >= beta) {
 						// Fail high
 
-						if (depth <= BUTTERFLY_BOARD_DEPTH)
+						if (info.depthRemaining <= BUTTERFLY_BOARD_DEPTH)
 							g_ButterflyBoard.data[TEAM][move.from][move.to] |= BUTTERFLY_VAL_BETA_CUTOFF;
 
 						return beta;
@@ -243,7 +267,7 @@ Value MinMaxSearchRecursive(
 					if (eval > alpha) {
 						// New best
 
-						if (depth <= BUTTERFLY_BOARD_DEPTH)
+						if (info.depthRemaining <= BUTTERFLY_BOARD_DEPTH)
 							g_ButterflyBoard.data[TEAM][move.from][move.to] |= BUTTERFLY_VAL_ALPHA_BEST;
 
 						bestMoveIndex = move.trueIndex;
@@ -254,7 +278,7 @@ Value MinMaxSearchRecursive(
 				// Update table entry
 				entry->bestMoveTrueIndex = bestMoveIndex;
 				entry->fullHash = boardState.hash;
-				entry->depth = depth;
+				entry->depth = info.depthRemaining;
 				entry->eval = alpha;
 			}
 		}
@@ -298,6 +322,9 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 
 	if (initialMoves.size > 0) {
 
+		// Mark old transpos entries
+		Transpos::main.MarkOld();
+
 		// Iterative deepening search
 		for (uint16_t curDepth = 1; (curDepth <= depth) && (!g_StopSearch); curDepth++) {
 			size_t msElapsed = CUR_MS() - startTimeMS;
@@ -316,9 +343,19 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 				}
 			};
 
+			// Create search info
+			SearchInfo searchInfo = {};
+			searchInfo.depthRemaining = curDepth;
+			ASSERT(g_Settings.maxExtendedDepth <= MAX_EXTENDED_DEPTH);
+			searchInfo.extendedDepthRemaining = g_Settings.maxExtendedDepth;
+
+			// Create frames
+			SearchFrame frames[MAX_SEARCH_DEPTH + MAX_EXTENDED_DEPTH] = {};
+
+			// Run recursive search
 			Value bestRelativeEval = fnMinMaxSearch(
 				isWhite ? TEAM_WHITE : TEAM_BLACK,
-				initialBoardState, -CHECKMATE_VALUE * 2, CHECKMATE_VALUE * 2, curDepth, g_Settings.maxExtendedDepth, 0
+				initialBoardState, -CHECKMATE_VALUE * 2, CHECKMATE_VALUE * 2, searchInfo, frames
 			);
 
 			if (g_StopSearch) // We stopped early, don't update PV or print info as it is invalid
@@ -342,11 +379,12 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 							pvBoardState.ExecuteMove(bestMove);
 							g_CurPV[i] = bestMove;
 							g_CurPVLength++;
-						} else {;
+						} else {
 							// Hash collision!
 							break;
 						}
 					} else {
+						// Failed to find
 						break;
 					}
 				}
@@ -389,6 +427,8 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 		g_CurState = previousState;
 	}
 	infoMutex.unlock();
+
+	g_StopSearch = false;
 
 	return SEARCH_COMPLETED;
 }

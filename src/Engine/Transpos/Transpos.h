@@ -19,11 +19,16 @@ struct TransposEntry {
 		fullHash = NULL;
 	}
 
-	FINLINE bool IsValid() {
+	FINLINE bool IsValid() const {
 		return fullHash != NULL;
+	}
+
+	FINLINE void Reset() {
+		fullHash = NULL;
 	}
 };
 
+// Amount of entries per bucket
 #define TRANSPOS_BUCKET_SIZE 4
 
 struct TransposBucket {
@@ -37,6 +42,9 @@ struct TransposBucket {
 
 // Number of buckets for every megabyte of memory
 #define TRANSPOS_BUCKET_COUNT_MB (1000 * 1000 / sizeof(TransposBucket))
+
+// Decrease in depth for old buckets from a pervious search
+#define TRANSPOS_OLD_DEPTH_DECREASE 3
 
 // TODO: Multithreading support (just give each thread its own portion of the buckets)
 struct TransposTable {
@@ -65,16 +73,24 @@ struct TransposTable {
 
 		// No entry exists for this position
 		// Try to find entry to replace
-		// TODO: Maybe merge this with the first loop for efficiency
-		for (size_t i = 0; i < TRANSPOS_BUCKET_SIZE; i++) {
+		// TODO: Maybe merge this with the first loop for efficiency (??)
+		size_t toReplaceIndex = 0;
+		uint16_t lowestDepth = bucket[0].depth;
+		for (size_t i = 1; i < TRANSPOS_BUCKET_SIZE; i++) {
 			TransposEntry& entry = bucket[i];
 			if (!entry.IsValid())
-				return &entry;
+				return &entry; // Found empty, use it
+
+			if (entry.depth < lowestDepth) {
+				lowestDepth = entry.depth;
+				toReplaceIndex = i;
+			}
 		}
 
-		// TODO: Prioritize replacing the oldest
-		return &(bucket[0]);
+		return &(bucket[toReplaceIndex]);
 	}
+
+	void MarkOld();
 };
 
 namespace Transpos {
