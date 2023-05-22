@@ -30,11 +30,11 @@ Value PieceValue::CalcPieceSquareValue(uint8_t pieceType, uint8_t team, Pos pos,
 				// Push pawns to the center
 				 0,   0,   0,   0,
 				50,  50,  50,  50,
-				10,  10,  20,  45,
-				 5,   5,  10,  45,
-				 0,   0,   5,  45,
-				 5,  -5,   5,  25,
-				 5,   0,   0, -35,
+				10,  10,  20,  35,
+				 5,   5,  10,  25,
+				 0,   0,   5,  15,
+				 5,  -5,   5,  15,
+				 5,   0,   0, -15,
 				 0,   0,   0,   0
 			},
 
@@ -81,24 +81,24 @@ Value PieceValue::CalcPieceSquareValue(uint8_t pieceType, uint8_t team, Pos pos,
 		{ // Knight
 			// Same for both
 			{
-				-50, -40, -30, -30,
-				-40, -20,   0,   0,
-				-30,   0,  10,  15,
-				-30,   5,  15,  20,
-				-30,   0,  15,  20,
-				-30,   5,  15,  15,
-				-40, -20,   0,   0,
-				-50, -40, -30, -30
+				-30, -20, -20, -20,
+				-20, -20,   0,   0,
+				-20,   0,  10,  10,
+				-10,   5,  10,  15,
+				-10,   0,  10,  15,
+				-10,   5,  10,  10,
+				-20, -20,   0,   0,
+				-20, -20, -20, -20
 			},
 			{
-				-50, -40, -30, -30,
-				-40, -20,   0,   0,
-				-30,   0,  10,  15,
-				-30,   5,  15,  20,
-				-30,   0,  15,  20,
-				-30,   5,  10,  15,
-				-40, -20,   0,   5,
-				-50, -40, -30, -30
+				-30, -20, -20, -20,
+				-20, -20,   0,   0,
+				-20,   0,  10,  10,
+				-10,   5,  10,  15,
+				-10,   0,  10,  15,
+				-10,   5,  10,  10,
+				-20, -20,   0,   0,
+				-20, -20, -20, -20
 			},
 		},
 
@@ -179,7 +179,7 @@ Value PieceValue::CalcPieceSquareValue(uint8_t pieceType, uint8_t team, Pos pos,
 		}
 	};
 
-	constexpr float BONUS_SCALE = 1.0f;
+	constexpr float BONUS_SCALE = 0.9f;
 
 	int mirrorIndex = mirrorX + ((7 - y) * BD_SIZE / 2);
 	return PIECE_BASE_VALUES[pieceType] + (PIECE_BONUS[pieceType][isEndGame][mirrorIndex] * BONUS_SCALE);

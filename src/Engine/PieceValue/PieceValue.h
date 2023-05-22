@@ -18,16 +18,16 @@ namespace PieceValue {
 		0, // Moves and attacks are actually different so this isn't useful anyway
 
 		// Rook
-		3,
+		2,
 
 		// Knight
-		5,
-
-		// Bishop
 		4,
 
+		// Bishop
+		3,
+
 		// Queen
-		2,
+		1,
 
 		// King
 		1
