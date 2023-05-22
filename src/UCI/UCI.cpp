@@ -88,6 +88,7 @@ bool UCI::ProcessCommand(vector<string> parts) {
 				try {
 					FEN::Parse(std::vector<string>(parts.begin() + 2, parts.begin() + 2 + fenPartAmount), newPosition);
 				} catch (std::exception& e) {
+					ASSERT(false);
 					return false;
 				}
 			} else {
