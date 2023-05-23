@@ -218,6 +218,8 @@ Value MinMaxSearchRecursive(
 
 				size_t quarterMoveCount = moveCount / 4;
 
+				Value eval = boardState.teamData[TEAM].totalValue - boardState.teamData[!TEAM].totalValue;
+
 				size_t bestMoveIndex = 0;
 				// NOTE: size_t is unsigned so our loop condition should be (i < size)
 				for (size_t i = moveCount - 1; i < moveCount; i--) {
@@ -236,13 +238,27 @@ Value MinMaxSearchRecursive(
 
 					Move& move = moves[i];
 
+					bool isCapture = (move.flags & Move::FL_CAPTURE);
+					
+					// Futility pruning
+					if (info.depthRemaining == 1 && !isCapture) {
+						constexpr Value FUTILITY_MARGIN = 100;
+						if (eval + move.moveRating < alpha - FUTILITY_MARGIN) {
+
+							// Cannot possibly improve alpha
+							continue;
+						}
+					}
+
 					BoardState boardCopy = boardState;
 					boardCopy.ExecuteMove(move);
+
+					bool isCheck = boardCopy.teamData[TEAM].checkers;
 
 					Value eval;
 					if (
 						info.depthRemaining == 1 && // Final depth (not counting eval)
-						(boardCopy.teamData[TEAM].checkers || (move.flags & Move::FL_CAPTURE)) && // Is check or capture
+						(isCapture || isCheck) &&
 						info.extendedDepthRemaining > 0 // We have extended depth left
 						) {
 						// Extended depth search
