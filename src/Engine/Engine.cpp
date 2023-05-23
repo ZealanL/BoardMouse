@@ -216,6 +216,8 @@ Value MinMaxSearchRecursive(
 				MoveRating::RateMoves(boardState, moves, g_ButterflyBoard);
 				MoveOrdering::SortMoves(moves);
 
+				size_t quarterMoveCount = moveCount / 4;
+
 				size_t bestMoveIndex = 0;
 				// NOTE: size_t is unsigned so our loop condition should be (i < size)
 				for (size_t i = moveCount - 1; i < moveCount; i--) {
@@ -223,6 +225,13 @@ Value MinMaxSearchRecursive(
 						// We already added this move to the end of the vector
 						// Ignore its original location
 						continue;
+					}
+
+					uint16_t depthReduction = 1;
+
+					// Late move reduction
+					if (i < quarterMoveCount && info.curDepth > 3 && info.depthRemaining < 4) {
+						depthReduction++;
 					}
 
 					Move& move = moves[i];
@@ -246,13 +255,17 @@ Value MinMaxSearchRecursive(
 						info.extendedDepthRemaining++;
 					} else {
 						// Normal search
+
+						// Don't reduce to negative depth
+						depthReduction = MIN(depthReduction, info.depthRemaining);
+
 						info.curDepth++;
-						info.depthRemaining--;
+						info.depthRemaining -= depthReduction;
 						eval = -MinMaxSearchRecursive<!TEAM>(
 							boardCopy, -beta, -alpha, info, frame + 1
 							);
 						info.curDepth--;
-						info.depthRemaining++;
+						info.depthRemaining += depthReduction;
 					}
 
 					if (eval >= beta) {
