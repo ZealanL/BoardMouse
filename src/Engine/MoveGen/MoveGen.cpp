@@ -71,7 +71,7 @@ FINLINE void AddMovesFromBB(Pos from, BitBoard toBB, BitBoard enemyOccupy, CALLB
 				}
 			}
 
-			Move move = { from, i, PIECE_TYPE, PIECE_TYPE, isCapture };
+			Move move = { from, i, PIECE_TYPE, PIECE_TYPE, flags };
 				callbackOrCount(move);
 			});
 	}
