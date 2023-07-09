@@ -39,7 +39,7 @@ namespace Engine {
 
 	struct Settings {
 		// Maximum extra plies to search if reached a capture or check at depth 0
-		uint16_t maxExtendedDepth = 3;
+		uint16_t maxExtendedDepth = 6;
 	};
 
 	enum {
