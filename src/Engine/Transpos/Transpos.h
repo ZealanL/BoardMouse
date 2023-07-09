@@ -10,6 +10,9 @@ struct TransposEntry {
 	// True index of the best move (see Move.trueIndex)
 	uint16_t bestMoveTrueIndex;
 
+	// We are currently exploring a position "within" this position, aka this position is a parent node of our current search
+	bool within = false;
+
 	// TODO: Store type for proper usage with alpha-beta pruning
 	// Is this an alpha eval, beta eval, or exact eval?
 

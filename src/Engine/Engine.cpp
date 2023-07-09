@@ -120,8 +120,13 @@ Value MinMaxSearchRecursive(
 
 	TransposEntry* entry = Transpos::main.Find(boardState.hash);
 	bool entryHashMatches = (entry->fullHash == boardState.hash);
-	if (entryHashMatches)
+	if (entryHashMatches) {
 		g_Stats.transposHits++;
+
+		if (entry->within) {
+			return 0; // Draw by repetition
+		}
+	}
 
 	if (entryHashMatches && entry->depth >= info.depthRemaining) {
 		// We've already evaluated this move at >= the current search depth, just use that
@@ -255,6 +260,8 @@ Value MinMaxSearchRecursive(
 
 					bool isCheck = boardCopy.teamData[TEAM].checkers;
 
+					entry->within = true;
+
 					Value eval;
 					if (
 						info.depthRemaining == 1 && // Final depth (not counting eval)
@@ -284,6 +291,8 @@ Value MinMaxSearchRecursive(
 						info.depthRemaining += depthReduction;
 					}
 
+					entry->within = false;
+
 					if (eval >= beta) {
 						// Fail high
 
@@ -295,7 +304,6 @@ Value MinMaxSearchRecursive(
 
 					if (eval > alpha) {
 						// New best
-
 						if (info.depthRemaining <= BUTTERFLY_BOARD_DEPTH)
 							g_ButterflyBoard.data[TEAM][move.from][move.to] |= BUTTERFLY_VAL_ALPHA_BEST;
 
