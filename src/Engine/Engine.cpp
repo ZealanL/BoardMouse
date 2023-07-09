@@ -266,7 +266,6 @@ Value MinMaxSearchRecursive(
 					boardCopy.ExecuteMove(move);
 
 					bool isCheck = boardCopy.teamData[TEAM].checkers;
-
 					entry->within = true;
 
 					Value eval;
@@ -425,14 +424,14 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 				MoveList firstMoves;
 				MoveGen::GetMoves(pvBoardState, firstMoves);
 
-				if (g_FirstBestMoveIdx != MAX_MOVES) {
+				if (g_FirstBestMoveIdx < firstMoves.size) {
 					g_CurPV[0] = firstMoves[g_FirstBestMoveIdx];
 				} else {
 					g_CurPV[0] = {}; // Invalid
+					ASSERT(false);
 				}
 
 				Move firstMove = g_CurPV[0];
-				ASSERT(firstMove.IsValid());
 				pvBoardState.ExecuteMove(firstMove);
 
 				for (size_t i = 1; i < curDepth; i++) {
