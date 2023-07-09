@@ -7,6 +7,8 @@
 #include "ButterflyBoard/ButterflyBoard.h"
 #include "Heuristics/Heuristics.h"
 
+size_t g_FirstBestMoveIdx = MAX_MOVES;
+
 Move g_CurPV[MAX_SEARCH_DEPTH] = {};
 uint16_t g_CurPVLength = 0;
 
@@ -139,6 +141,11 @@ Value MinMaxSearchRecursive(
 		}
 
 		alpha = MAX(alpha, eval);
+
+		if (info.curDepth == 0) {
+			g_FirstBestMoveIdx = entry->bestMoveTrueIndex;
+		}
+
 	} else {
 		// No transposition entry for this position is as deep
 
@@ -309,6 +316,12 @@ Value MinMaxSearchRecursive(
 
 						bestMoveIndex = move.trueIndex;
 						alpha = eval;
+
+						if (info.curDepth == 0) {
+							// Make sure first PV move is the best move
+							// This prevents a best move from failing to be selected if there is a TT collision
+							g_FirstBestMoveIdx = bestMoveIndex;
+						}
 					}
 				}
 
@@ -362,6 +375,9 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 		// Mark old transpos entries
 		Transpos::main.MarkOld();
 
+		// Invalidate first PV move
+		g_FirstBestMoveIdx = MAX_MOVES;
+
 		// Iterative deepening search
 		for (uint16_t curDepth = 1; (curDepth <= depth) && (!g_StopSearch); curDepth++) {
 			size_t msElapsed = CUR_MS() - startTimeMS;
@@ -402,11 +418,24 @@ uint8_t Engine::DoSearch(uint16_t depth, size_t maxTimeMS) {
 			infoMutex.lock();
 			{
 
-				g_CurPVLength = 0;
+				g_CurPVLength = 1;
 				BoardState pvBoardState = initialBoardState;
 				pvBoardState.ForceUpdateAll();
 
-				for (size_t i = 0; i < curDepth; i++) {
+				MoveList firstMoves;
+				MoveGen::GetMoves(pvBoardState, firstMoves);
+
+				if (g_FirstBestMoveIdx != MAX_MOVES) {
+					g_CurPV[0] = firstMoves[g_FirstBestMoveIdx];
+				} else {
+					g_CurPV[0] = {}; // Invalid
+				}
+
+				Move firstMove = g_CurPV[0];
+				ASSERT(firstMove.IsValid());
+				pvBoardState.ExecuteMove(firstMove);
+
+				for (size_t i = 1; i < curDepth; i++) {
 					TransposEntry* entry = Transpos::main.Find(pvBoardState.hash);
 					if (entry->fullHash == pvBoardState.hash) {
 						MoveList moves;
