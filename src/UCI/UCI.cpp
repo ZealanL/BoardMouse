@@ -61,7 +61,10 @@ void UCI::Init() {
 bool UCI::ProcessCommand(vector<string> parts) {
 	string firstPart = parts.front();
 
-	if (firstPart == "isready") {
+	if (firstPart == "uci") {
+		LOG("uciok");
+		return true;
+	} else if (firstPart == "isready") {
 		LOG("readyok");
 		return true;
 	} else if (firstPart == "quit") {
