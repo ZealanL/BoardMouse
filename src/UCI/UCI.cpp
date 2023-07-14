@@ -62,6 +62,8 @@ bool UCI::ProcessCommand(vector<string> parts) {
 	string firstPart = parts.front();
 
 	if (firstPart == "uci") {
+		LOG("id name BoardMouse " BM_VERSION)
+		LOG("id author ZealanL")
 		LOG("uciok");
 		return true;
 	} else if (firstPart == "isready") {
